@@ -1,13 +1,17 @@
-import { CalendarDays, ListChecks, LogOut } from 'lucide-react'
-import { useRef, useState, type KeyboardEvent } from 'react'
+import { Ban, CalendarDays, Clock, Images, ListChecks, LogOut, Tags } from 'lucide-react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Aviso } from '../../components/Aviso'
 import { Boton } from '../../components/Boton'
 import { DialogoConfirmacion } from '../../components/Dialogo'
 import { useDatos } from '../../context/contextoDatos'
 import { cx } from '../../lib/cx'
 import { calcularEstadisticas } from '../../services/reservas'
-import { DisponibilidadAdmin } from './DisponibilidadAdmin'
+import { AgendaAdmin } from './AgendaAdmin'
+import { BloqueosAdmin } from './BloqueosAdmin'
+import { EtiquetasAdmin } from './EtiquetasAdmin'
+import { GaleriaAdmin } from './GaleriaAdmin'
 import { ReservasAdmin } from './ReservasAdmin'
+import { ServiciosAdmin } from './ServiciosAdmin'
 
 export interface Mensaje {
   tipo: 'exito' | 'error'
@@ -16,7 +20,11 @@ export interface Mensaje {
 
 const PESTANAS = [
   { id: 'reservas', titulo: 'Reservas', Icono: ListChecks },
-  { id: 'disponibilidad', titulo: 'Disponibilidad del calendario', Icono: CalendarDays },
+  { id: 'agenda', titulo: 'Agenda', Icono: CalendarDays },
+  { id: 'bloqueos', titulo: 'Bloqueos', Icono: Ban },
+  { id: 'servicios', titulo: 'Servicios', Icono: Clock },
+  { id: 'galeria', titulo: 'Galería', Icono: Images },
+  { id: 'etiquetas', titulo: 'Etiquetas', Icono: Tags },
 ] as const
 type Pestana = (typeof PESTANAS)[number]['id']
 
@@ -29,11 +37,27 @@ export function PanelAdmin({ onSalir }: { onSalir: () => void }) {
   const stats = calcularEstadisticas(reservas, hoy)
   const cantidadDemo = reservas.filter((r) => r.esDemo).length + bloqueos.filter((b) => b.esDemo).length
 
+  function cambiarPestana(id: Pestana) {
+    setPestana(id)
+    setMensaje(null)
+  }
+
+  // En pantallas angostas la barra de pestañas se desplaza: la activa queda a la vista.
+  useEffect(() => {
+    const boton = refsPestanas.current[pestana]
+    const barra = boton?.parentElement
+    if (!boton || !barra) return
+    const izquierda = boton.offsetLeft - barra.offsetLeft
+    if (izquierda < barra.scrollLeft || izquierda + boton.offsetWidth > barra.scrollLeft + barra.clientWidth) {
+      barra.scrollTo({ left: izquierda - 16 })
+    }
+  }, [pestana])
+
   function alTeclearPestana(e: KeyboardEvent) {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
     const i = PESTANAS.findIndex((p) => p.id === pestana)
     const siguiente = PESTANAS[(i + (e.key === 'ArrowRight' ? 1 : -1) + PESTANAS.length) % PESTANAS.length].id
-    setPestana(siguiente)
+    cambiarPestana(siguiente)
     refsPestanas.current[siguiente]?.focus()
   }
 
@@ -87,7 +111,7 @@ export function PanelAdmin({ onSalir }: { onSalir: () => void }) {
         </section>
 
         <div className="sticky top-[72px] z-20 -mx-5 mt-10 border-b border-borde bg-fondo/95 px-5 backdrop-blur sm:mx-0 sm:px-0">
-          <div role="tablist" aria-label="Secciones del panel" className="flex gap-6 overflow-x-auto" onKeyDown={alTeclearPestana}>
+          <div role="tablist" aria-label="Secciones del panel" className="flex gap-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" onKeyDown={alTeclearPestana}>
             {PESTANAS.map(({ id, titulo, Icono }) => (
               <button
                 key={id}
@@ -100,7 +124,7 @@ export function PanelAdmin({ onSalir }: { onSalir: () => void }) {
                 aria-selected={pestana === id}
                 aria-controls={`panel-${id}`}
                 tabIndex={pestana === id ? 0 : -1}
-                onClick={() => setPestana(id)}
+                onClick={() => cambiarPestana(id)}
                 className={cx(
                   '-mb-px flex shrink-0 items-center gap-2 border-b-2 py-4 text-sm transition-colors',
                   pestana === id ? 'border-tinta text-tinta' : 'border-transparent text-gris hover:text-tinta',
@@ -122,7 +146,16 @@ export function PanelAdmin({ onSalir }: { onSalir: () => void }) {
         </div>
 
         <div id={`panel-${pestana}`} role="tabpanel" aria-labelledby={`pestana-${pestana}`} className="mt-8">
-          {pestana === 'reservas' ? <ReservasAdmin onMensaje={setMensaje} /> : <DisponibilidadAdmin onMensaje={setMensaje} />}
+          {
+            {
+              reservas: <ReservasAdmin onMensaje={setMensaje} />,
+              agenda: <AgendaAdmin onGestionarBloqueos={() => cambiarPestana('bloqueos')} />,
+              bloqueos: <BloqueosAdmin onMensaje={setMensaje} />,
+              servicios: <ServiciosAdmin onMensaje={setMensaje} />,
+              galeria: <GaleriaAdmin onMensaje={setMensaje} />,
+              etiquetas: <EtiquetasAdmin onMensaje={setMensaje} />,
+            }[pestana]
+          }
         </div>
 
         {cantidadDemo > 0 && (

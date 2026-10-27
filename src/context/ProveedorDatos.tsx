@@ -1,17 +1,28 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { PREFIJO } from '../lib/almacenamiento'
 import { hoyISO } from '../lib/fechas'
+import * as catalogo from '../services/catalogo'
 import * as servicio from '../services/reservas'
 import { ContextoDatos, type ValorDatos } from './contextoDatos'
 
 function leerTodo() {
-  const reservas = servicio.leerReservas()
-  const bloqueos = servicio.leerBloqueos()
+  const lecturas = {
+    reservas: servicio.leerReservas(),
+    bloqueos: servicio.leerBloqueos(),
+    servicios: catalogo.leerServicios(),
+    etiquetas: catalogo.leerEtiquetas(),
+    galeria: catalogo.leerGaleria(),
+  }
   return {
-    reservas: reservas.datos,
-    bloqueos: bloqueos.datos,
+    reservas: lecturas.reservas.datos,
+    bloqueos: lecturas.bloqueos.datos,
+    servicios: lecturas.servicios.datos,
+    etiquetas: lecturas.etiquetas.datos,
+    galeria: lecturas.galeria.datos,
     hoy: hoyISO(),
-    avisos: [reservas.aviso, bloqueos.aviso].filter((a): a is string => Boolean(a)),
+    avisos: Object.values(lecturas)
+      .map((l) => l.aviso)
+      .filter((a): a is string => Boolean(a)),
   }
 }
 
@@ -61,17 +72,26 @@ export function ProveedorDatos({ children, avisoInicial }: { children: ReactNode
         }
       }
     return {
-      reservas: datos.reservas,
-      bloqueos: datos.bloqueos,
-      hoy: datos.hoy,
+      ...datos,
       avisos,
       descartarAvisos: () => setAvisos([]),
-      estadoDeFecha: (fecha) => servicio.estadoDeFecha(fecha, datos.reservas, datos.bloqueos, datos.hoy),
+      buscarServicio: (id) => datos.servicios.find((s) => s.id === id),
+      estadoDeFecha: (fecha, duracionHoras) => servicio.estadoDeFecha(fecha, datos.reservas, datos.bloqueos, duracionHoras),
+      horariosDisponibles: (fecha, duracionHoras) =>
+        servicio.horariosDisponibles(fecha, duracionHoras, datos.reservas, datos.bloqueos),
       crearReserva: conRefresco(servicio.crearReserva),
       cambiarEstado: conRefresco(servicio.cambiarEstadoReserva),
-      bloquearFecha: conRefresco(servicio.bloquearFecha),
-      desbloquearFecha: conRefresco(servicio.desbloquearFecha),
+      bloquear: conRefresco(servicio.bloquear),
+      eliminarBloqueo: conRefresco(servicio.eliminarBloqueo),
       eliminarDatosDemo: conRefresco(servicio.eliminarDatosDemo),
+      actualizarServicio: conRefresco(catalogo.actualizarServicio),
+      crearEtiqueta: conRefresco(catalogo.crearEtiqueta),
+      renombrarEtiqueta: conRefresco(catalogo.renombrarEtiqueta),
+      eliminarEtiqueta: conRefresco(catalogo.eliminarEtiqueta),
+      agregarFoto: conRefresco(catalogo.agregarFoto),
+      actualizarFoto: conRefresco(catalogo.actualizarFoto),
+      eliminarFoto: conRefresco(catalogo.eliminarFoto),
+      moverFoto: conRefresco(catalogo.moverFoto),
     }
   }, [datos, avisos, refrescar])
 

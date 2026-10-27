@@ -8,16 +8,17 @@ import { Campo } from '../components/Campo'
 import { ListaDatos, useTituloPagina } from '../components/Varios'
 import { useDatos } from '../context/contextoDatos'
 import { urlFoto } from '../data/fotos'
-import { buscarServicio, esServicioId, SERVICIOS, type ServicioId } from '../data/servicios'
+import { esServicioId, type ServicioId } from '../data/servicios'
 import { cx } from '../lib/cx'
 import { formatearFechaLarga, mesDeFecha } from '../lib/fechas'
+import { formatearDuracion, formatearFranja, sumarHoras } from '../lib/horas'
 import { LIMITES, validarCampo, type CampoReserva } from '../lib/validacion'
 import { ErrorReserva } from '../services/reservas'
 
 type Paso = 1 | 2 | 3 | 4
 const PASOS: { n: Paso; titulo: string }[] = [
   { n: 1, titulo: 'Servicio' },
-  { n: 2, titulo: 'Fecha' },
+  { n: 2, titulo: 'Fecha y hora' },
   { n: 3, titulo: 'Tus datos' },
   { n: 4, titulo: 'Revisión' },
 ]
@@ -31,7 +32,7 @@ export default function Reservar() {
   useTituloPagina('Reservar una fecha')
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const { hoy, estadoDeFecha, crearReserva } = useDatos()
+  const { hoy, servicios, buscarServicio, horariosDisponibles, crearReserva } = useDatos()
 
   const servicioUrl = params.get('servicio')
   const servicioInicial = esServicioId(servicioUrl) ? servicioUrl : null
@@ -39,6 +40,7 @@ export default function Reservar() {
   const [paso, setPaso] = useState<Paso>(servicioInicial ? 2 : 1)
   const [servicioId, setServicioId] = useState<ServicioId | null>(servicioInicial)
   const [fecha, setFecha] = useState<string | null>(null)
+  const [hora, setHora] = useState<string | null>(null)
   const [mes, setMes] = useState(() => mesDeFecha(hoy))
   const [contacto, setContacto] = useState<Record<CampoContacto, string>>({ nombre: '', celular: '', email: '', notas: '' })
   const [tocados, setTocados] = useState<Partial<Record<CampoReserva, boolean>>>({})
@@ -50,18 +52,34 @@ export default function Reservar() {
   const primerRender = useRef(true)
 
   const servicio = servicioId ? buscarServicio(servicioId) : undefined
-  const valores: Record<CampoReserva, string> = { ...contacto, servicioId: servicioId ?? '', fecha: fecha ?? '' }
+  const valores: Record<CampoReserva, string> = {
+    ...contacto,
+    servicioId: servicioId ?? '',
+    fecha: fecha ?? '',
+    horaInicio: hora ?? '',
+  }
   const errorDe = (campo: CampoReserva) => (tocados[campo] ? validarCampo(campo, valores[campo], hoy) : undefined)
+  const horarios = fecha && servicio ? horariosDisponibles(fecha, servicio.duracionHoras) : []
+  const horaFin = hora && servicio ? sumarHoras(hora, servicio.duracionHoras) : null
 
-  // La disponibilidad puede cambiar mientras se completa el formulario
-  // (por ejemplo, desde el panel en otra pestaña): se revalida en cada cambio.
-  const estadoFechaElegida = fecha ? estadoDeFecha(fecha) : null
+  // La disponibilidad puede cambiar mientras se completa el formulario (desde
+  // el panel en otra pestaña, o al cambiar de servicio y con él la duración).
+  const claveHorarios = horarios.join(',')
   useEffect(() => {
-    if (!fecha || enviandoRef.current || estadoFechaElegida === 'disponible') return
-    setAvisoFecha(`La fecha ${formatearFechaLarga(fecha)} dejó de estar disponible. Elegí otra fecha, por favor.`)
-    setFecha(null)
-    setPaso((p) => (p > 2 ? 2 : p))
-  }, [fecha, estadoFechaElegida])
+    if (!fecha || !servicio || enviandoRef.current) return
+    if (claveHorarios === '') {
+      setAvisoFecha(
+        `El ${formatearFechaLarga(fecha)} ya no tiene horarios libres para “${servicio.nombre}” (${formatearDuracion(servicio.duracionHoras)}). Elegí otra fecha, por favor.`,
+      )
+      setFecha(null)
+      setHora(null)
+      setPaso((p) => (p > 2 ? 2 : p))
+    } else if (hora && !claveHorarios.split(',').includes(hora)) {
+      setAvisoFecha(`El horario de las ${hora} h ya no está disponible para este servicio. Elegí otro horario.`)
+      setHora(null)
+      setPaso((p) => (p > 2 ? 2 : p))
+    }
+  }, [fecha, hora, servicio, claveHorarios])
 
   useEffect(() => {
     if (primerRender.current) {
@@ -79,11 +97,12 @@ export default function Reservar() {
 
   function continuarDesdeServicio() {
     if (!servicioId) return setErrorPaso('Elegí un servicio para continuar.')
-    irA(fecha ? 3 : 2)
+    irA(fecha && hora ? 3 : 2)
   }
 
   function continuarDesdeFecha() {
     if (!fecha) return setErrorPaso('Elegí una fecha disponible en el calendario para continuar.')
+    if (!hora) return setErrorPaso('Elegí el horario de inicio para continuar.')
     setAvisoFecha(null)
     irA(3)
   }
@@ -101,20 +120,20 @@ export default function Reservar() {
   }
 
   async function confirmar() {
-    if (enviandoRef.current || !servicioId || !fecha) return
+    if (enviandoRef.current || !servicioId || !fecha || !hora) return
     enviandoRef.current = true
     setEnviando(true)
     setErrorPaso(null)
     await esperar(450)
     try {
-      const reserva = crearReserva({ ...contacto, servicioId, fecha })
+      const reserva = crearReserva({ ...contacto, servicioId, fecha, horaInicio: hora })
       navigate(`/confirmacion/${reserva.id}`)
     } catch (err) {
       enviandoRef.current = false
       setEnviando(false)
       if (err instanceof ErrorReserva && err.codigo === 'NO_DISPONIBLE') {
         setAvisoFecha(`${err.message} No se registró la solicitud.`)
-        setFecha(null)
+        setHora(null)
         irA(2)
       } else if (err instanceof ErrorReserva && err.codigo === 'VALIDACION') {
         setTocados(Object.fromEntries(CAMPOS_PASO_3.map((c) => [c, true])))
@@ -144,13 +163,13 @@ export default function Reservar() {
       </header>
 
       <div className="contenedor mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-14">
-        <section className="scroll-mt-24" aria-labelledby="titulo-paso">
+        <section className="min-w-0 scroll-mt-24" aria-labelledby="titulo-paso">
           <h2 id="titulo-paso" ref={tituloRef} tabIndex={-1} className="font-serif text-2xl focus:outline-none sm:text-3xl">
             <span className="mr-3 text-arena">{paso}.</span>
             {
               {
                 1: 'Elegí el servicio',
-                2: 'Elegí la fecha',
+                2: 'Elegí la fecha y el horario',
                 3: 'Completá tus datos',
                 4: 'Revisá y confirmá',
               }[paso]
@@ -168,7 +187,7 @@ export default function Reservar() {
               <fieldset>
                 <legend className="sr-only">Tipo de servicio</legend>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {SERVICIOS.map((s) => {
+                  {servicios.map((s) => {
                     const elegido = servicioId === s.id
                     return (
                       <label
@@ -192,7 +211,7 @@ export default function Reservar() {
                         <img src={urlFoto(s.foto, 240)} alt="" className="size-20 shrink-0 rounded-sm bg-stone-200 object-cover sm:size-24" loading="lazy" />
                         <span className="flex min-w-0 flex-col justify-center pr-6">
                           <span className="font-serif text-lg leading-snug">{s.nombre}</span>
-                          <span className="mt-1 text-[13px] text-gris">Duración: {s.duracion}</span>
+                          <span className="mt-1 text-[13px] text-gris">Duración: {formatearDuracion(s.duracionHoras)}</span>
                           <span className="text-[13px] text-gris">{s.precio}</span>
                         </span>
                         <span
@@ -230,7 +249,9 @@ export default function Reservar() {
                   mes={mes}
                   onCambiarMes={setMes}
                   seleccionada={fecha}
+                  duracionHoras={servicio?.duracionHoras}
                   onSeleccionar={(f) => {
+                    if (f !== fecha) setHora(null)
                     setFecha(f)
                     setErrorPaso(null)
                     setAvisoFecha(null)
@@ -239,16 +260,51 @@ export default function Reservar() {
                 <LeyendaCalendario className="mt-6 border-t border-borde pt-5" />
               </div>
               <p className="mt-4 text-[13px] leading-relaxed text-gris">
-                La disponibilidad se guarda en este navegador. La confirmación final de la fecha se coordina directamente con
-                Leandro.
+                Los días marcados como “Completa” no tienen lugar para un turno de {servicio ? formatearDuracion(servicio.duracionHoras) : 'esta duración'}.
+                La disponibilidad se guarda en este navegador y la confirmación final se coordina directamente con Leandro.
               </p>
-              <p className="mt-4 min-h-6 text-[15px]" aria-live="polite">
-                {fecha ? (
+
+              {fecha && servicio && (
+                <fieldset className="mt-8 rounded-sm border border-borde bg-tarjeta p-4 animate-aparecer sm:p-7">
+                  <legend className="sr-only">Horario de inicio</legend>
+                  <p className="font-serif text-xl">Horario de inicio</p>
+                  <p className="mt-1 text-sm text-gris">
+                    {formatearFechaLarga(fecha)} · Sesión de {formatearDuracion(servicio.duracionHoras)}
+                  </p>
+                  <div className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+                    {horarios.map((h) => (
+                      <button
+                        key={h}
+                        type="button"
+                        aria-pressed={hora === h}
+                        aria-label={`De ${formatearFranja(h, sumarHoras(h, servicio.duracionHoras))}`}
+                        onClick={() => {
+                          setHora(h)
+                          setErrorPaso(null)
+                          setAvisoFecha(null)
+                        }}
+                        className={cx(
+                          'flex h-14 flex-col items-center justify-center rounded-sm border text-sm tabular-nums transition-colors',
+                          hora === h ? 'border-arena bg-arena font-semibold text-tinta' : 'border-borde hover:border-stone-400 hover:bg-arena-claro',
+                        )}
+                      >
+                        {h}
+                        <span className={cx('text-[11px]', hora === h ? 'text-tinta/80' : 'text-gris')}>
+                          a {sumarHoras(h, servicio.duracionHoras)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
+
+              <p className="mt-5 min-h-6 text-[15px]" aria-live="polite">
+                {fecha && hora && horaFin ? (
                   <>
-                    Fecha elegida: <strong className="font-medium">{formatearFechaLarga(fecha)}</strong>
+                    Turno elegido: <strong className="font-medium">{formatearFechaLarga(fecha)}, de {formatearFranja(hora, horaFin)}</strong>
                   </>
                 ) : (
-                  <span className="text-gris">Todavía no elegiste una fecha.</span>
+                  <span className="text-gris">{fecha ? 'Elegí el horario de inicio.' : 'Todavía no elegiste una fecha.'}</span>
                 )}
               </p>
               <BarraAcciones>
@@ -323,9 +379,9 @@ export default function Reservar() {
                       <option value="" disabled>
                         Elegí una opción
                       </option>
-                      {SERVICIOS.map((s) => (
+                      {servicios.map((s) => (
                         <option key={s.id} value={s.id}>
-                          {s.nombre}
+                          {s.nombre} ({formatearDuracion(s.duracionHoras)})
                         </option>
                       ))}
                     </select>
@@ -365,13 +421,22 @@ export default function Reservar() {
             </form>
           )}
 
-          {paso === 4 && servicio && fecha && (
+          {paso === 4 && servicio && fecha && hora && horaFin && (
             <div className="mt-8">
               <div className="rounded-sm border border-borde bg-tarjeta px-5 sm:px-7">
                 <ListaDatos
                   items={[
                     { etiqueta: 'Servicio', valor: <ConCambio texto={servicio.nombre} onCambiar={() => irA(1)} /> },
                     { etiqueta: 'Fecha solicitada', valor: <ConCambio texto={formatearFechaLarga(fecha)} onCambiar={() => irA(2)} /> },
+                    {
+                      etiqueta: 'Horario',
+                      valor: (
+                        <ConCambio
+                          texto={`${formatearFranja(hora, horaFin)} · ${formatearDuracion(servicio.duracionHoras)}`}
+                          onCambiar={() => irA(2)}
+                        />
+                      ),
+                    },
                     { etiqueta: 'Nombre y apellido', valor: <ConCambio texto={contacto.nombre} onCambiar={() => irA(3)} /> },
                     { etiqueta: 'Celular', valor: contacto.celular },
                     { etiqueta: 'Correo electrónico', valor: contacto.email },
@@ -423,10 +488,16 @@ export default function Reservar() {
                   <dt className="text-[13px] text-gris">Fecha</dt>
                   <dd className="mt-0.5">{fecha ? formatearFechaLarga(fecha) : <span className="text-stone-400">Sin elegir</span>}</dd>
                 </div>
+                <div>
+                  <dt className="text-[13px] text-gris">Horario</dt>
+                  <dd className="mt-0.5">
+                    {hora && horaFin ? formatearFranja(hora, horaFin) : <span className="text-stone-400">Sin elegir</span>}
+                  </dd>
+                </div>
                 {servicio && (
                   <div>
-                    <dt className="text-[13px] text-gris">Duración orientativa</dt>
-                    <dd className="mt-0.5">{servicio.duracion}</dd>
+                    <dt className="text-[13px] text-gris">Duración</dt>
+                    <dd className="mt-0.5">{formatearDuracion(servicio.duracionHoras)}</dd>
                   </div>
                 )}
                 <div>

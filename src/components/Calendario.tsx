@@ -18,7 +18,8 @@ import type { EstadoDia } from '../types'
 
 export const TEXTO_ESTADO_DIA: Record<EstadoDia, string> = {
   disponible: 'Disponible',
-  ocupada: 'Ocupada',
+  parcial: 'Horarios limitados',
+  ocupada: 'Completa',
   bloqueada: 'Bloqueada',
   pasada: 'Fecha pasada',
 }
@@ -28,14 +29,16 @@ interface Props {
   onCambiarMes: (mes: MesCalendario) => void
   seleccionada: string | null
   onSeleccionar: (fecha: string) => void
-  /** Qué días se pueden elegir. Por defecto, solo los disponibles. */
+  /** Qué días se pueden elegir. Por defecto, los que tienen algún horario libre. */
   esSeleccionable?: (estado: EstadoDia) => boolean
+  /** Duración del turno buscado: un día queda "Completo" si no entra ninguno. */
+  duracionHoras?: number
   /** Texto adicional para lectores de pantalla (p. ej. código de reserva). */
   describirDia?: (fecha: string) => string | undefined
   className?: string
 }
 
-const soloDisponibles = (estado: EstadoDia) => estado === 'disponible'
+const soloDisponibles = (estado: EstadoDia) => estado === 'disponible' || estado === 'parcial'
 
 /**
  * Calendario mensual compartido por la reserva pública y el panel de
@@ -49,6 +52,7 @@ export function Calendario({
   onSeleccionar,
   esSeleccionable = soloDisponibles,
   describirDia,
+  duracionHoras,
   className,
 }: Props) {
   const { estadoDeFecha, hoy } = useDatos()
@@ -99,10 +103,10 @@ export function Calendario({
   return (
     <div className={cx('select-none', className)}>
       <div className="flex items-center justify-between gap-3">
-        <h3 id={idTitulo} className="font-serif text-lg whitespace-nowrap sm:text-2xl" aria-live="polite">
+        <h3 id={idTitulo} className="min-w-0 font-serif text-lg leading-tight sm:text-2xl" aria-live="polite">
           {nombreMes(mes)}
         </h3>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           {!fechaEnMes(hoy, mes) && (
             <button
               type="button"
@@ -145,7 +149,7 @@ export function Calendario({
         <div className="grid grid-cols-7 gap-1">
           {semanas.flat().map((fecha, i) => {
             if (!fecha) return <div key={`vacio-${i}`} aria-hidden="true" />
-            const estado = estadoDeFecha(fecha)
+            const estado = estadoDeFecha(fecha, duracionHoras)
             const seleccionable = esSeleccionable(estado)
             const esSeleccionada = fecha === seleccionada
             const esHoy = fecha === hoy
@@ -181,12 +185,13 @@ export function Calendario({
                     ? 'bg-arena font-semibold text-tinta'
                     : {
                         disponible: 'text-tinta hover:bg-arena-claro',
+                        parcial: 'text-tinta hover:bg-arena-claro',
                         ocupada: 'bg-ocupada-fondo text-ocupada line-through decoration-ocupada/40',
                         bloqueada: 'rayado bg-stone-100 text-stone-400',
                         pasada: 'text-stone-300',
                       }[estado],
                   seleccionable ? 'cursor-pointer' : 'cursor-not-allowed',
-                  seleccionable && !esSeleccionada && estado !== 'disponible' && 'hover:ring-1 hover:ring-stone-400 hover:ring-inset',
+                  seleccionable && !esSeleccionada && estado !== 'disponible' && estado !== 'parcial' && 'hover:ring-1 hover:ring-stone-400 hover:ring-inset',
                   esHoy && 'ring-1 ring-tinta ring-inset',
                 )}
               >
@@ -210,15 +215,21 @@ function mismoDiaEnMes(fecha: string, n: number): string {
 
 function IndicadorDia({ estado, seleccionada }: { estado: EstadoDia; seleccionada: boolean }) {
   if (seleccionada || estado === 'pasada') return null
-  const color = { disponible: 'bg-arena', ocupada: 'bg-ocupada', bloqueada: 'bg-stone-400' }[estado]
-  return <span className={cx('absolute bottom-1.5 size-1 rounded-full', color)} aria-hidden="true" />
+  const estilo = {
+    disponible: 'size-1 bg-arena',
+    parcial: 'size-1.5 border border-arena-texto bg-transparent',
+    ocupada: 'size-1 bg-ocupada',
+    bloqueada: 'size-1 bg-stone-400',
+  }[estado]
+  return <span className={cx('absolute bottom-1.5 rounded-full', estilo)} aria-hidden="true" />
 }
 
 export function LeyendaCalendario({ className }: { className?: string }) {
   const items = [
     { texto: 'Disponible', muestra: <span className="relative block size-5 rounded-sm border border-borde bg-tarjeta"><span className="absolute bottom-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-arena" /></span> },
+    { texto: 'Horarios limitados', muestra: <span className="relative block size-5 rounded-sm border border-borde bg-tarjeta"><span className="absolute bottom-0.5 left-1/2 size-1.5 -translate-x-1/2 rounded-full border border-arena-texto" /></span> },
     { texto: 'Seleccionada', muestra: <span className="block size-5 rounded-sm bg-arena" /> },
-    { texto: 'Ocupada', muestra: <span className="block size-5 rounded-sm bg-ocupada-fondo ring-1 ring-ocupada/30 ring-inset" /> },
+    { texto: 'Completa', muestra: <span className="block size-5 rounded-sm bg-ocupada-fondo ring-1 ring-ocupada/30 ring-inset" /> },
     { texto: 'Bloqueada', muestra: <span className="rayado block size-5 rounded-sm bg-stone-100" /> },
     { texto: 'Pasada', muestra: <span className="grid size-5 place-items-center rounded-sm text-[10px] text-stone-300">00</span> },
     { texto: 'Hoy', muestra: <span className="block size-5 rounded-sm ring-1 ring-tinta ring-inset" /> },

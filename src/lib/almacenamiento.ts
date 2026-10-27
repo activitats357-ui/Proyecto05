@@ -9,7 +9,25 @@ export const CLAVES = {
   reservas: `${PREFIJO}reservas`,
   bloqueos: `${PREFIJO}fechas_bloqueadas`,
   configuracion: `${PREFIJO}configuracion`,
+  servicios: `${PREFIJO}servicios`,
+  etiquetas: `${PREFIJO}etiquetas`,
+  galeria: `${PREFIJO}galeria`,
 } as const
+
+/** Caracteres ocupados por las claves de la app (localStorage suele admitir unos 5 millones). */
+export function usoAlmacenamiento(): number {
+  try {
+    const s = storage()
+    let total = 0
+    for (let i = 0; i < s.length; i++) {
+      const clave = s.key(i)
+      if (clave?.startsWith(PREFIJO)) total += clave.length + (s.getItem(clave)?.length ?? 0)
+    }
+    return total
+  } catch {
+    return 0
+  }
+}
 
 export class ErrorAlmacenamiento extends Error {
   constructor(mensaje: string, options?: { cause?: unknown }) {

@@ -6,6 +6,7 @@ import { EtiquetaEstado, ListaDatos, useTituloPagina } from '../components/Vario
 import { CONFIG } from '../config'
 import { useDatos } from '../context/contextoDatos'
 import { formatearFechaHora, formatearFechaLarga } from '../lib/fechas'
+import { duracionEntre, formatearDuracion, formatearFranja } from '../lib/horas'
 import { mensajeReserva, urlWhatsApp } from '../lib/whatsapp'
 
 export default function Confirmacion() {
@@ -63,6 +64,10 @@ export default function Confirmacion() {
             { etiqueta: 'Correo electrónico', valor: reserva.email },
             { etiqueta: 'Servicio', valor: reserva.servicioNombre },
             { etiqueta: 'Fecha solicitada', valor: formatearFechaLarga(reserva.fecha) },
+            {
+              etiqueta: 'Horario',
+              valor: `${formatearFranja(reserva.horaInicio, reserva.horaFin)} · ${formatearDuracion(duracionEntre(reserva.horaInicio, reserva.horaFin))}`,
+            },
             { etiqueta: 'Comentarios', valor: reserva.notas || <span className="text-gris">Sin comentarios adicionales</span> },
             { etiqueta: 'Registrada', valor: formatearFechaHora(reserva.creadaEn) },
           ]}

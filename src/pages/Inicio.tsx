@@ -3,8 +3,9 @@ import { BotonLink } from '../components/Boton'
 import { Galeria } from '../components/Galeria'
 import { EncabezadoSeccion, Revelar, useTituloPagina } from '../components/Varios'
 import { FOTOS, srcSetFoto, urlFoto } from '../data/fotos'
-import { SERVICIOS } from '../data/servicios'
+import { useDatos } from '../context/contextoDatos'
 import { cx } from '../lib/cx'
+import { formatearDuracion } from '../lib/horas'
 
 export default function Inicio() {
   useTituloPagina('')
@@ -114,6 +115,7 @@ function Presentacion() {
 }
 
 function Servicios() {
+  const { servicios } = useDatos()
   return (
     <section id="servicios" className="scroll-mt-20 border-y border-borde bg-tarjeta py-24 sm:py-32">
       <div className="contenedor">
@@ -125,7 +127,7 @@ function Servicios() {
         </Revelar>
 
         <ol className="mt-16 space-y-20 sm:mt-20 sm:space-y-28">
-          {SERVICIOS.map((s, i) => (
+          {servicios.map((s, i) => (
             <li key={s.id}>
               <article className="grid items-center gap-8 md:grid-cols-12 md:gap-12" aria-labelledby={`servicio-${s.id}`}>
                 <Revelar className={cx('md:col-span-6', i % 2 === 1 && 'md:order-2 md:col-start-7')}>
@@ -149,7 +151,7 @@ function Servicios() {
                   <dl className="mt-8 grid grid-cols-2 gap-6 border-y border-borde py-5">
                     <div>
                       <dt className="text-[11px] tracking-[0.2em] text-gris uppercase">Duración orientativa</dt>
-                      <dd className="mt-1.5 text-[15px]">{s.duracion}</dd>
+                      <dd className="mt-1.5 text-[15px]">{formatearDuracion(s.duracionHoras)}</dd>
                     </div>
                     <div>
                       <dt className="text-[11px] tracking-[0.2em] text-gris uppercase">Inversión</dt>

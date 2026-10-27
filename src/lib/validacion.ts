@@ -1,6 +1,7 @@
 import { esServicioId } from '../data/servicios'
 import type { DatosNuevaReserva } from '../types'
 import { esFechaISOValida, esPasada, hoyISO } from './fechas'
+import { esHoraValida } from './horas'
 
 export type CampoReserva = keyof DatosNuevaReserva
 export type ErroresReserva = Partial<Record<CampoReserva, string>>
@@ -37,6 +38,10 @@ export function validarCampo(campo: CampoReserva, valor: string, hoy = hoyISO())
       if (!v) return 'Elegí una fecha en el calendario.'
       if (!esFechaISOValida(v)) return 'La fecha no es válida. Elegila de nuevo en el calendario.'
       if (esPasada(v, hoy)) return 'La fecha ya pasó. Elegí una fecha futura.'
+      return
+    case 'horaInicio':
+      if (!v) return 'Elegí el horario de inicio.'
+      if (!esHoraValida(v)) return 'El horario no es válido. Elegilo de nuevo.'
       return
     case 'notas':
       if (v.length > LIMITES.notas) return `Los comentarios pueden tener hasta ${LIMITES.notas} caracteres.`

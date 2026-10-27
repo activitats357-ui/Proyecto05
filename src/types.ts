@@ -19,6 +19,10 @@ export interface Reserva {
   servicioNombre: string
   /** Formato YYYY-MM-DD (fecha local, sin hora). */
   fecha: string
+  /** Formato HH:MM. */
+  horaInicio: string
+  /** Formato HH:MM. Se calcula con la duración del servicio al reservar. */
+  horaFin: string
   notas: string
   estado: EstadoReserva
   /** Fecha y hora ISO. */
@@ -28,17 +32,30 @@ export interface Reserva {
   esDemo?: boolean
 }
 
+/** Bloqueo manual: el día completo (sin horas) o una franja horaria. */
 export interface FechaBloqueada {
+  id: string
   /** Formato YYYY-MM-DD. */
   fecha: string
+  horaInicio?: string
+  horaFin?: string
   motivo?: string
   creadaEn: string
   esDemo?: boolean
 }
 
-export type DatosNuevaReserva = Pick<Reserva, 'nombre' | 'celular' | 'email' | 'servicioId' | 'fecha' | 'notas'>
+export interface FranjaHoraria {
+  horaInicio: string
+  horaFin: string
+}
 
-export type EstadoDia = 'disponible' | 'ocupada' | 'bloqueada' | 'pasada'
+export type DatosNuevaReserva = Pick<Reserva, 'nombre' | 'celular' | 'email' | 'servicioId' | 'fecha' | 'horaInicio' | 'notas'>
+
+/**
+ * disponible: sin ocupación · parcial: hay horarios libres, pero no todo el día
+ * ocupada: no queda ningún horario para la duración pedida · bloqueada: día completo bloqueado
+ */
+export type EstadoDia = 'disponible' | 'parcial' | 'ocupada' | 'bloqueada' | 'pasada'
 
 export interface Estadisticas {
   total: number
@@ -46,4 +63,21 @@ export interface Estadisticas {
   confirmadas: number
   canceladas: number
   proximas: number
+}
+
+export interface Etiqueta {
+  id: string
+  nombre: string
+}
+
+export interface FotoGaleria {
+  id: string
+  /** URL https (Unsplash u otra) o imagen subida como data URL. */
+  src: string
+  alt: string
+  /** Identificadores de etiqueta. */
+  etiquetas: string[]
+  /** Ancho y alto (o proporción) de la imagen. */
+  proporcion?: [number, number]
+  creadaEn: string
 }

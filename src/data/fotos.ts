@@ -66,16 +66,32 @@ export const FOTOS = {
   },
 } satisfies Record<string, Foto>
 
-export type CategoriaGaleria = 'bodas' | 'retratos' | 'familias' | 'eventos'
+const RE_UNSPLASH = /^https:\/\/images\.unsplash\.com\/photo-[\w-]+$/
 
-export const CATEGORIAS_GALERIA: { id: CategoriaGaleria; nombre: string }[] = [
+/** URL para mostrar una imagen de la galería. Las de Unsplash se piden al tamaño justo. */
+export function urlImagen(src: string, ancho: number, proporcion?: [number, number]): string {
+  if (!RE_UNSPLASH.test(src)) return src
+  const ar = proporcion ? `&ar=${proporcion[0]}:${proporcion[1]}` : ''
+  return `${src}?auto=format&fit=crop&q=75&w=${ancho}${ar}`
+}
+
+export function srcSetImagen(src: string, proporcion?: [number, number], anchoMaximo = 1080): string | undefined {
+  if (!RE_UNSPLASH.test(src)) return undefined
+  return ANCHOS.filter((a) => a <= anchoMaximo)
+    .map((a) => `${urlImagen(src, a, proporcion)} ${a}w`)
+    .join(', ')
+}
+
+/** Etiquetas iniciales de la galería (editables desde /admin). */
+export const ETIQUETAS_INICIALES = [
   { id: 'bodas', nombre: 'Bodas' },
   { id: 'retratos', nombre: 'Retratos' },
   { id: 'familias', nombre: 'Familias' },
   { id: 'eventos', nombre: 'Eventos' },
 ]
 
-export const GALERIA: (Foto & { categoria: CategoriaGaleria })[] = [
+/** Contenido inicial de la galería; luego se gestiona desde /admin. */
+export const GALERIA_INICIAL: (Foto & { categoria: string })[] = [
   { categoria: 'bodas', id: '1519741497674-611481863552', alt: 'Novia sosteniendo el ramo junto al novio', proporcion: [3, 2] },
   { categoria: 'retratos', id: '1531746020798-e6953c6e8e04', alt: 'Retrato de una mujer sobre fondo rosado', proporcion: [4, 5] },
   { categoria: 'bodas', id: '1583939003579-730e3918a45a', alt: 'Novios besándose entre una lluvia de pétalos y sus invitados', proporcion: [2, 3] },

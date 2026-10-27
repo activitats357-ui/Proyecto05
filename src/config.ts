@@ -28,6 +28,14 @@ export const CONFIG = {
   // Correo de contacto público. Vacío = no se muestra.
   email: '',
 
+  /** Jornada en la que se pueden reservar turnos. */
+  agenda: {
+    horaInicio: '08:00',
+    horaFin: '23:00',
+    // Separación entre horarios de inicio y unidad mínima de duración.
+    intervaloMinutos: 30,
+  },
+
   admin: {
     // Protección de demostración: el código del cliente puede inspeccionarse.
     clave: 'leandro2026',

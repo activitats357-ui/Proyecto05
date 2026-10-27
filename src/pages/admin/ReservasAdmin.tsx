@@ -5,6 +5,7 @@ import { EtiquetaEstado } from '../../components/Varios'
 import { useDatos } from '../../context/contextoDatos'
 import { cx } from '../../lib/cx'
 import { formatearFechaCorta, formatearFechaHora, formatearFechaLarga, sumarDias } from '../../lib/fechas'
+import { formatearFranja } from '../../lib/horas'
 import { ocupaFecha } from '../../services/reservas'
 import { ESTADOS_RESERVA, ETIQUETA_ESTADO, type EstadoReserva, type Reserva } from '../../types'
 import type { Mensaje } from './PanelAdmin'
@@ -52,12 +53,12 @@ export function ReservasAdmin({ onMensaje }: { onMensaje: (m: Mensaje | null) =>
         }
       })
       .filter((r) => !texto || [r.id, r.nombre, r.email, r.celular].some((v) => v.toLowerCase().includes(texto)))
-      .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.creadaEn.localeCompare(b.creadaEn))
+      .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.horaInicio.localeCompare(b.horaInicio))
   }, [reservas, estado, periodo, desde, hasta, busqueda, hoy])
 
   const proximas = reservas
     .filter((r) => ocupaFecha(r.estado) && r.fecha >= hoy)
-    .sort((a, b) => a.fecha.localeCompare(b.fecha))
+    .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.horaInicio.localeCompare(b.horaInicio))
     .slice(0, 4)
 
   function aplicarCambio(r: Reserva, nuevo: EstadoReserva) {
@@ -103,6 +104,7 @@ export function ReservasAdmin({ onMensaje }: { onMensaje: (m: Mensaje | null) =>
             {proximas.map((r) => (
               <li key={r.id} className="rounded-sm border border-borde bg-tarjeta p-4">
                 <p className="font-serif text-lg leading-snug">{formatearFechaLarga(r.fecha)}</p>
+                <p className="mt-1 text-[13px] text-gris tabular-nums">{formatearFranja(r.horaInicio, r.horaFin)}</p>
                 <p className="mt-2 truncate text-sm">{r.nombre}</p>
                 <p className="truncate text-[13px] text-gris">{r.servicioNombre}</p>
                 <EtiquetaEstado estado={r.estado} className="mt-3" />
@@ -197,7 +199,12 @@ export function ReservasAdmin({ onMensaje }: { onMensaje: (m: Mensaje | null) =>
                         {r.id}
                         {r.esDemo && <EtiquetaDemo />}
                       </td>
-                      <td className={cx('px-4 py-4 whitespace-nowrap', r.fecha < hoy && 'text-gris')}>{formatearFechaCorta(r.fecha)}</td>
+                      <td className={cx('px-4 py-4 whitespace-nowrap', r.fecha < hoy && 'text-gris')}>
+                        {formatearFechaCorta(r.fecha)}
+                        <p className="text-[13px] text-gris tabular-nums">
+                          {r.horaInicio}–{r.horaFin}
+                        </p>
+                      </td>
                       <td className="max-w-48 px-4 py-4">
                         <p className="font-medium">{r.nombre}</p>
                         {r.notas && (
@@ -234,6 +241,8 @@ export function ReservasAdmin({ onMensaje }: { onMensaje: (m: Mensaje | null) =>
                     <EtiquetaEstado estado={r.estado} className="shrink-0" />
                   </div>
                   <dl className="mt-4 grid grid-cols-[6.5rem_1fr] gap-x-3 gap-y-1.5 text-[13px]">
+                    <dt className="text-gris">Horario</dt>
+                    <dd className="tabular-nums">{formatearFranja(r.horaInicio, r.horaFin)}</dd>
                     <dt className="text-gris">Cliente</dt>
                     <dd className="min-w-0 break-words">{r.nombre}</dd>
                     <dt className="text-gris">Servicio</dt>
@@ -269,7 +278,8 @@ export function ReservasAdmin({ onMensaje }: { onMensaje: (m: Mensaje | null) =>
           aCancelar && (
             <>
               La reserva <strong className="text-tinta">{aCancelar.id}</strong> de {aCancelar.nombre} para el{' '}
-              {formatearFechaLarga(aCancelar.fecha)} pasará a “Cancelada” y la fecha quedará disponible en el calendario.
+              {formatearFechaLarga(aCancelar.fecha)} ({formatearFranja(aCancelar.horaInicio, aCancelar.horaFin)}) pasará a
+              “Cancelada” y ese horario quedará disponible en el calendario.
             </>
           )
         }

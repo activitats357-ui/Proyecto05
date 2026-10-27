@@ -36,66 +36,88 @@ Todos los datos editables están en **`src/config.ts`**:
 | Correo público | `CONFIG.email` | Vacío (no se muestra) |
 | Clave del panel `/admin` | `CONFIG.admin.clave` | `leandro2026` |
 | Ubicación, cobertura y horarios | `CONFIG.ubicacion`, `CONFIG.cobertura`, `CONFIG.horario` | Datos reales del brief |
+| Jornada reservable | `CONFIG.agenda.horaInicio` / `horaFin` | 08:00 a 23:00 |
+| Separación entre horarios de inicio | `CONFIG.agenda.intervaloMinutos` | 30 minutos |
 
 - El número de WhatsApp va en formato internacional, sin `+` ni espacios. Si se deja vacío, los botones de WhatsApp se desactivan y se muestra un aviso.
 - Al cargar los datos reales, poné `esMuestra: false` para ocultar las indicaciones de “muestra”.
-- Los servicios están en `src/data/servicios.ts`. **No cambies los `id`**: se guardan en cada reserva.
-- Las fotografías (Unsplash, de uso libre) están en `src/data/fotos.ts`. Conviene reemplazarlas por fotografías propias.
+- El **nombre y la duración** de cada servicio se cambian desde el panel (pestaña *Servicios*). Los valores por defecto, la descripción y la foto están en `src/data/servicios.ts`. **No cambies los `id`**: se guardan en cada reserva.
+- La **galería y sus etiquetas** se gestionan desde el panel. El contenido inicial (fotos de Unsplash, de uso libre) está en `src/data/fotos.ts`.
 
 ## Páginas
 
 | Ruta | Contenido |
 | --- | --- |
 | `/` | Portada, presentación, servicios, galería con ampliación y llamada a la acción |
-| `/reservar` | Proceso guiado en 4 pasos: servicio → fecha → datos → revisión. Acepta `?servicio=<id>` para preseleccionar un servicio |
-| `/confirmacion/:id` | Resumen de la solicitud y botón para preparar el mensaje de WhatsApp |
+| `/reservar` | Proceso guiado en 4 pasos: servicio → fecha y horario → datos → revisión. Acepta `?servicio=<id>` para preseleccionar un servicio |
+| `/confirmacion/:id` | Resumen de la solicitud (con horario) y botón para preparar el mensaje de WhatsApp |
 | `/contacto` | Datos de contacto y formulario que abre WhatsApp con el mensaje redactado |
 | `/politicas` | Estructura de políticas (contenido provisional, pendiente de redacción) |
-| `/admin` | Acceso con clave, resumen, gestión de reservas y bloqueo de fechas |
+| `/admin` | Acceso con clave y panel con seis pestañas (ver abajo) |
 
-## Reglas de disponibilidad
+### Panel de administración
 
-Las reglas viven en un solo lugar (`src/services/reservas.ts`) y las usan tanto el calendario público como el del panel:
+| Pestaña | Qué permite |
+| --- | --- |
+| Reservas | Resumen, próximas reservas, filtros y cambio de estado |
+| Agenda | Calendario de consulta: reservas y bloqueos de cada día y franjas libres |
+| Bloqueos | Bloquear un **día completo** o una **franja horaria**, con motivo; listar y eliminar bloqueos |
+| Servicios | Cambiar el **nombre** y la **duración en horas** de los 4 servicios |
+| Galería | Subir fotos (se reducen a 1600 px) o agregarlas por URL, describirlas, etiquetarlas, ordenarlas y eliminarlas |
+| Etiquetas | Crear, renombrar y eliminar etiquetas (al eliminar una, se quita de las fotos) |
 
-1. Una fecha está **ocupada** si tiene una reserva `pendiente` o `confirmada`. Las `canceladas` no ocupan.
-2. Una fecha está **bloqueada** si el administrador la bloqueó manualmente.
-3. Las fechas **pasadas** no se pueden reservar ni bloquear.
-4. Antes de guardar, una reserva o un cambio de estado se vuelve a comprobar **contra lo guardado en ese momento**. Así se evitan duplicados por doble clic o por formularios abiertos en dos pestañas.
-5. No se puede reactivar una reserva cancelada si su fecha ya está ocupada o bloqueada.
-6. No se puede bloquear ni desbloquear una fecha con una reserva activa.
+## Turnos y reglas de disponibilidad
 
-Las fechas se manejan como cadenas `YYYY-MM-DD` en hora local, para evitar desfasajes por zona horaria.
+Cada reserva ocupa un **turno**: hora de inicio + duración del servicio. Los horarios de inicio se ofrecen cada 30 minutos dentro de la jornada. Las reglas viven en un solo lugar (`src/services/reservas.ts`) y las usan tanto el calendario público como el panel:
+
+1. Las reservas `pendiente` y `confirmada` ocupan su franja; las `canceladas` no.
+2. Un bloqueo puede ser de **día completo** o de una **franja horaria**.
+3. Un turno solo se ofrece si entra completo en la jornada, sin superponerse con reservas activas ni bloqueos. Si el turno es para hoy, tiene que empezar después de la hora actual.
+4. En el calendario, cada día se marca como *Disponible*, *Horarios limitados* (hay ocupación, pero entra el turno), *Completa* (no entra ningún turno de esa duración), *Bloqueada* o *Pasada*.
+5. Antes de guardar, una reserva o un cambio de estado se vuelve a comprobar **contra lo guardado en ese momento**. Así se evitan duplicados por doble clic o por formularios abiertos en dos pestañas.
+6. No se puede reactivar una reserva cancelada si su franja ya está ocupada o bloqueada.
+7. No se puede bloquear sobre una reserva activa, ni bloquear el día completo si ya tiene reservas o franjas bloqueadas.
+8. Cambiar la duración de un servicio afecta solo a las reservas nuevas: las existentes guardan su hora de fin.
+
+Las fechas se manejan como cadenas `YYYY-MM-DD` y las horas como `HH:MM`, siempre en hora local.
 
 ## Almacenamiento (localStorage)
 
 | Clave | Contenido |
 | --- | --- |
 | `leandro_baez_reservas` | Lista de reservas (`Reserva[]`) |
-| `leandro_baez_fechas_bloqueadas` | Lista de fechas bloqueadas (`FechaBloqueada[]`) |
+| `leandro_baez_fechas_bloqueadas` | Bloqueos de día completo o de franja (`FechaBloqueada[]`) |
+| `leandro_baez_servicios` | Nombre y duración modificados de cada servicio |
+| `leandro_baez_etiquetas` | Etiquetas de la galería (`Etiqueta[]`) |
+| `leandro_baez_galeria` | Fotos de la galería (`FotoGaleria[]`); las subidas se guardan como imagen JPEG |
 | `leandro_baez_configuracion` | Metadatos (versión, fecha de inicialización) |
 | `leandro_baez_admin_sesion` *(sessionStorage)* | Sesión del panel; se borra al cerrar la pestaña |
 
 - Si un dato guardado está dañado (JSON inválido o registros con formato incorrecto), **no se sobrescribe en silencio**: se guarda una copia en `<clave>__respaldo` y se muestra un aviso.
 - Los errores de espacio insuficiente o de almacenamiento bloqueado se informan en pantalla.
 - La interfaz se actualiza en el momento después de cada operación. Los cambios hechos desde otra pestaña se detectan con el evento `storage` y al volver a la pestaña.
+- Los datos de la versión anterior (reservas sin horario) se migran solos: esas reservas ocupan la jornada completa.
+- localStorage admite unos 5 MB por sitio. El panel de galería muestra el espacio usado; cada foto subida ocupa unos 150–400 KB.
 
 ## Datos de demostración
 
 En la primera carga, **y solo si las claves no existen**, se crean:
 
-- 6 reservas ficticias (códigos `LB-DEMO01` a `LB-DEMO06`) con fechas futuras relativas al día de la primera carga: pendientes, confirmadas y una cancelada.
-- 3 fechas bloqueadas: “Descanso personal”, “Fecha no laborable” y “Compromiso profesional”.
+- 6 reservas ficticias con horario (códigos `LB-DEMO01` a `LB-DEMO06`), con fechas futuras relativas al día de la primera carga: pendientes, confirmadas y una cancelada.
+- 3 bloqueos: dos de día completo (“Descanso personal”, “Fecha no laborable”) y una franja de 15:00 a 19:00 (“Compromiso profesional”).
+- Las 4 etiquetas iniciales (Bodas, Retratos, Familias, Eventos) y 14 fotos de galería.
 
 Todos llevan `esDemo: true` y datos de prueba (dominio `ejemplo.com`, teléfonos `+595 900 000 1xx`). Desde el panel se pueden quitar con **“Quitar datos de demostración”**, sin tocar los datos reales. Para empezar de cero, borrá las claves `leandro_baez_*` desde las herramientas del navegador.
 
 ## Limitaciones de esta versión
 
 - **La disponibilidad es local a cada navegador.** Una reserva hecha en un dispositivo no la ve otro dispositivo ni el fotógrafo. No es una agenda compartida ni en tiempo real. Por eso la reserva se presenta como *solicitud registrada* y la coordinación sigue por WhatsApp.
+- **Los cambios del panel (servicios, galería, etiquetas, bloqueos) también son locales.** Solo se ven en el navegador donde se hicieron; los demás visitantes siguen viendo el contenido inicial.
 - **El acceso a `/admin` es una protección de demostración.** La clave está en el código del cliente y se puede inspeccionar. No es apta para producción.
 - El botón de WhatsApp solo **abre** WhatsApp con el mensaje redactado. No se envía nada automáticamente.
 - Las políticas y condiciones están pendientes de redacción y deben revisarse antes de publicar.
 
-Una fase posterior podrá conectar la capa `src/services/reservas.ts` a una base de datos real sin tocar los componentes de la interfaz.
+Una fase posterior podrá conectar las capas `src/services/reservas.ts` y `src/services/catalogo.ts` a una base de datos real sin tocar los componentes de la interfaz.
 
 ## Estructura
 
@@ -104,7 +126,7 @@ src/
   config.ts              Configuración editable (contacto, WhatsApp, clave admin)
   types.ts               Interfaces Reserva, FechaBloqueada, etc.
   data/                  Servicios y fotografías
-  lib/                   Fechas, almacenamiento, validación, WhatsApp
+  lib/                   Fechas, horas, almacenamiento, validación, imágenes, WhatsApp
   services/              Reglas de reservas/disponibilidad y datos demo
   context/               Estado React sincronizado con localStorage
   components/            Encabezado, pie, calendario, galería, formularios…

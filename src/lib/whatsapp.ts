@@ -1,6 +1,7 @@
 import { CONFIG } from '../config'
 import type { Reserva } from '../types'
 import { formatearFechaLarga } from './fechas'
+import { duracionEntre, formatearDuracion, formatearFranja } from './horas'
 
 /** Devuelve la URL wa.me o null si el número no está configurado. */
 export function urlWhatsApp(mensaje: string, numero: string = CONFIG.whatsapp.numero): string | null {
@@ -19,6 +20,7 @@ export function mensajeReserva(r: Reserva): string {
     `Correo: ${r.email}`,
     `Servicio: ${r.servicioNombre}`,
     `Fecha solicitada: ${formatearFechaLarga(r.fecha)}`,
+    `Horario: ${formatearFranja(r.horaInicio, r.horaFin)} (${formatearDuracion(duracionEntre(r.horaInicio, r.horaFin))})`,
     `Comentarios: ${r.notas.trim() || 'Sin comentarios adicionales'}`,
     '',
     '¿Podemos confirmar los detalles? ¡Muchas gracias!',

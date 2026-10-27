@@ -1,35 +1,50 @@
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { useState } from 'react'
-import { CATEGORIAS_GALERIA, GALERIA, srcSetFoto, urlFoto, type CategoriaGaleria } from '../data/fotos'
+import { useDatos } from '../context/contextoDatos'
+import { srcSetImagen, urlImagen } from '../data/fotos'
 import { cx } from '../lib/cx'
 import { Dialogo } from './Dialogo'
 
 export function Galeria() {
-  const [filtro, setFiltro] = useState<CategoriaGaleria | 'todas'>('todas')
+  const { galeria, etiquetas } = useDatos()
+  const [filtroElegido, setFiltro] = useState<string>('todas')
   const [indice, setIndice] = useState<number | null>(null)
-  const fotos = filtro === 'todas' ? GALERIA : GALERIA.filter((f) => f.categoria === filtro)
+
+  // Solo se ofrecen como filtro las etiquetas que tienen alguna foto.
+  const etiquetasUsadas = etiquetas.filter((e) => galeria.some((f) => f.etiquetas.includes(e.id)))
+  const filtro = etiquetasUsadas.some((e) => e.id === filtroElegido) ? filtroElegido : 'todas'
+  const fotos = filtro === 'todas' ? galeria : galeria.filter((f) => f.etiquetas.includes(filtro))
   const actual = indice !== null ? fotos[indice] : null
 
   const mover = (n: number) => setIndice((i) => (i === null ? i : (i + n + fotos.length) % fotos.length))
 
+  if (galeria.length === 0) {
+    return <p className="rounded-sm border border-dashed border-stone-300 p-10 text-center text-sm text-gris">Muy pronto, nuevas fotos.</p>
+  }
+
   return (
     <div>
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar galería">
-        {[{ id: 'todas' as const, nombre: 'Todas' }, ...CATEGORIAS_GALERIA].map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            aria-pressed={filtro === c.id}
-            onClick={() => setFiltro(c.id)}
-            className={cx(
-              'h-9 rounded-full border px-4 text-[13px] transition-colors',
-              filtro === c.id ? 'border-tinta bg-tinta text-white' : 'border-borde text-stone-600 hover:border-stone-400 hover:text-tinta',
-            )}
-          >
-            {c.nombre}
-          </button>
-        ))}
-      </div>
+      {etiquetasUsadas.length > 0 && (
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar galería">
+          {[{ id: 'todas', nombre: 'Todas' }, ...etiquetasUsadas].map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              aria-pressed={filtro === c.id}
+              onClick={() => {
+                setFiltro(c.id)
+                setIndice(null)
+              }}
+              className={cx(
+                'h-9 rounded-full border px-4 text-[13px] transition-colors',
+                filtro === c.id ? 'border-tinta bg-tinta text-white' : 'border-borde text-stone-600 hover:border-stone-400 hover:text-tinta',
+              )}
+            >
+              {c.nombre}
+            </button>
+          ))}
+        </div>
+      )}
 
       <ul className="mt-8 columns-2 gap-3 sm:gap-4 lg:columns-3">
         {fotos.map((foto, i) => (
@@ -38,12 +53,12 @@ export function Galeria() {
               type="button"
               onClick={() => setIndice(i)}
               className="group relative block w-full overflow-hidden rounded-sm bg-stone-200"
-              style={{ aspectRatio: `${foto.proporcion[0]} / ${foto.proporcion[1]}` }}
+              style={foto.proporcion ? { aspectRatio: `${foto.proporcion[0]} / ${foto.proporcion[1]}` } : undefined}
               aria-label={`Ampliar foto: ${foto.alt}`}
             >
               <img
-                src={urlFoto(foto, 800)}
-                srcSet={srcSetFoto(foto, 1080)}
+                src={urlImagen(foto.src, 800, foto.proporcion)}
+                srcSet={srcSetImagen(foto.src, foto.proporcion)}
                 sizes="(min-width: 1024px) 30vw, 48vw"
                 alt=""
                 loading="lazy"
@@ -70,11 +85,7 @@ export function Galeria() {
               if (e.key === 'ArrowLeft') mover(-1)
             }}
           >
-            <img
-              src={urlFoto(actual, 1600)}
-              alt={actual.alt}
-              className="max-h-[78svh] w-auto max-w-full rounded-sm object-contain"
-            />
+            <img src={urlImagen(actual.src, 1600)} alt={actual.alt} className="max-h-[78svh] w-auto max-w-full rounded-sm object-contain" />
             <p className="mt-4 px-12 text-center text-sm text-white/80">{actual.alt}</p>
             <div className="mt-4 flex items-center gap-3">
               <button type="button" onClick={() => mover(-1)} className="grid size-11 place-items-center rounded-full border border-white/30 text-white hover:bg-white/10" aria-label="Foto anterior">

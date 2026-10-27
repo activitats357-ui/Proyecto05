@@ -6,11 +6,12 @@ import { Campo } from '../components/Campo'
 import { IconoInstagram, useTituloPagina } from '../components/Varios'
 import { CONFIG, HAY_DATOS_DE_MUESTRA } from '../config'
 import { FOTOS, srcSetFoto, urlFoto } from '../data/fotos'
-import { SERVICIOS } from '../data/servicios'
+import { useDatos } from '../context/contextoDatos'
 import { mensajeContacto, urlWhatsApp } from '../lib/whatsapp'
 
 export default function Contacto() {
   useTituloPagina('Contacto')
+  const { servicios } = useDatos()
   const [nombre, setNombre] = useState('')
   const [servicio, setServicio] = useState('')
   const [mensaje, setMensaje] = useState('')
@@ -150,7 +151,7 @@ export default function Contacto() {
               {(p) => (
                 <select {...p} value={servicio} onChange={(e) => setServicio(e.target.value)} className="control">
                   <option value="">Todavía no sé</option>
-                  {SERVICIOS.map((s) => (
+                  {servicios.map((s) => (
                     <option key={s.id} value={s.nombre}>
                       {s.nombre}
                     </option>
