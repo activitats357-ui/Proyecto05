@@ -116,4 +116,4 @@ src/
 Es una SPA con `BrowserRouter`: el servidor debe redirigir todas las rutas a `index.html`.
 
 - **Netlify:** ya incluido en `public/_redirects`.
-- **Vercel:** detecta Vite automáticamente; agregá un rewrite de `/(.*)` a `/index.html` si hiciera falta.
+- **Vercel:** ya incluido en `vercel.json` (rewrite de todas las rutas a `/index.html`).
