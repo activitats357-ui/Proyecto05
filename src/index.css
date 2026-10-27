@@ -1,0 +1,103 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-fondo: #fafaf9;
+  --color-tinta: #1c1917;
+  --color-gris: #78716c;
+  --color-arena: #c5a880;
+  --color-arena-hover: #b89a6f;
+  --color-arena-claro: #f4eee4;
+  --color-arena-texto: #7d6238;
+  --color-borde: #e7e5e4;
+  --color-tarjeta: #ffffff;
+  --color-ocupada: #8c3b2f;
+  --color-ocupada-fondo: #f6ebe8;
+  --color-exito: #3f5b3a;
+  --color-exito-fondo: #ebf0e8;
+
+  --font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --animate-aparecer: aparecer 0.5s ease-out both;
+
+  @keyframes aparecer {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-fondo font-sans text-tinta antialiased;
+  }
+  ::selection {
+    @apply bg-arena-claro text-tinta;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-tinta);
+    outline-offset: 2px;
+  }
+  [type='date']::-webkit-calendar-picker-indicator {
+    opacity: 0.55;
+  }
+}
+
+@layer components {
+  .contenedor {
+    @apply mx-auto w-full max-w-7xl px-5 sm:px-8;
+  }
+  .antetitulo {
+    @apply text-[11px] font-medium tracking-[0.28em] text-arena-texto uppercase;
+  }
+  .control {
+    @apply mt-2 block w-full rounded-sm border border-borde bg-tarjeta px-3.5 py-2.5 text-[15px] text-tinta transition-colors placeholder:text-stone-400 hover:border-stone-300 focus:border-tinta focus:outline-none focus-visible:outline-none aria-[invalid=true]:border-ocupada;
+  }
+  /* Rayado diagonal para fechas bloqueadas */
+  .rayado {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      transparent 0 5px,
+      rgb(120 113 108 / 0.13) 5px 6px
+    );
+  }
+}
+
+/* Aparición suave al hacer scroll */
+.revelar {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.7s ease-out,
+    transform 0.7s ease-out;
+}
+.revelar.visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .revelar {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
