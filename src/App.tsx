@@ -4,6 +4,7 @@ import Admin from './pages/admin/Admin'
 import RestablecerClave from './pages/admin/RestablecerClave'
 import Confirmacion from './pages/Confirmacion'
 import Contacto from './pages/Contacto'
+import Documentacion from './pages/Documentacion'
 import Inicio from './pages/Inicio'
 import NoEncontrada from './pages/NoEncontrada'
 import Politicas from './pages/Politicas'
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="politicas" element={<Politicas />} />
         <Route path="admin" element={<Admin />} />
         <Route path="admin/restablecer" element={<RestablecerClave />} />
+        <Route path="documentacion" element={<Documentacion />} />
         <Route path="*" element={<NoEncontrada />} />
       </Route>
     </Routes>

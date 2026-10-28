@@ -35,6 +35,8 @@ export interface ValorDatos {
   bloquear: (fecha: string, franja: FranjaHoraria | null, motivo?: string) => FechaBloqueada
   eliminarBloqueo: (id: string) => void
   eliminarDatosDemo: () => { reservas: number; bloqueos: number }
+  /** Vuelve todo el contenido al estado inicial de demostración (no toca la cuenta). */
+  restablecerDatosDemo: () => void
 
   actualizarServicio: (id: ServicioId, nombre: string, duracionHoras: number) => Servicio
   actualizarHorario: (horaInicio: string, horaFin: string) => FranjaHoraria

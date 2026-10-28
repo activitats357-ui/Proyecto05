@@ -1,5 +1,5 @@
 import { ArrowLeft, KeyRound, LoaderCircle, Lock, Mail } from 'lucide-react'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Aviso } from '../../components/Aviso'
 import { Boton } from '../../components/Boton'
@@ -25,8 +25,13 @@ function sesionActiva(): boolean {
  * la contraseña nunca se guarda en texto.
  */
 export default function Admin() {
-  const [autenticado, setAutenticado] = useState(sesionActiva)
   useTituloPagina('Administración')
+  return <RequiereAdmin>{(salir) => <PanelAdmin onSalir={salir} />}</RequiereAdmin>
+}
+
+/** Muestra la pantalla de acceso hasta que se ingresa la contraseña de administración. */
+export function RequiereAdmin({ children }: { children: (salir: () => void) => ReactNode }) {
+  const [autenticado, setAutenticado] = useState(sesionActiva)
 
   function salir() {
     try {
@@ -51,7 +56,7 @@ export default function Admin() {
       />
     )
   }
-  return <PanelAdmin onSalir={salir} />
+  return <>{children(salir)}</>
 }
 
 function AccesoAdmin({ onAcceso }: { onAcceso: () => void }) {

@@ -1,7 +1,8 @@
-import { Ban, CalendarDays, Clock, Images, ListChecks, LogOut, Tags, UserRound } from 'lucide-react'
+import { Ban, BookOpen, CalendarDays, Clock, Eraser, Images, ListChecks, LogOut, RotateCcw, Tags, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { Aviso } from '../../components/Aviso'
-import { Boton } from '../../components/Boton'
+import { Boton, BotonLink } from '../../components/Boton'
 import { DialogoConfirmacion } from '../../components/Dialogo'
 import { useDatos } from '../../context/contextoDatos'
 import { cx } from '../../lib/cx'
@@ -31,10 +32,11 @@ const PESTANAS = [
 type Pestana = (typeof PESTANAS)[number]['id']
 
 export function PanelAdmin({ onSalir }: { onSalir: () => void }) {
-  const { reservas, bloqueos, hoy, eliminarDatosDemo } = useDatos()
+  const { reservas, bloqueos, hoy, eliminarDatosDemo, restablecerDatosDemo } = useDatos()
   const [pestana, setPestana] = useState<Pestana>('reservas')
   const [mensaje, setMensaje] = useState<Mensaje | null>(null)
   const [confirmarLimpieza, setConfirmarLimpieza] = useState(false)
+  const [confirmarRestablecer, setConfirmarRestablecer] = useState(false)
   const refsPestanas = useRef<Record<string, HTMLButtonElement | null>>({})
   const stats = calcularEstadisticas(reservas, hoy)
   const cantidadDemo = reservas.filter((r) => r.esDemo).length + bloqueos.filter((b) => b.esDemo).length
@@ -61,6 +63,16 @@ export function PanelAdmin({ onSalir }: { onSalir: () => void }) {
     const siguiente = PESTANAS[(i + (e.key === 'ArrowRight' ? 1 : -1) + PESTANAS.length) % PESTANAS.length].id
     cambiarPestana(siguiente)
     refsPestanas.current[siguiente]?.focus()
+  }
+
+  function restablecer() {
+    setConfirmarRestablecer(false)
+    try {
+      restablecerDatosDemo()
+      setMensaje({ tipo: 'exito', texto: 'Se restablecieron todos los datos de demostración.' })
+    } catch (e) {
+      setMensaje({ tipo: 'error', texto: e instanceof Error ? e.message : 'No se pudieron restablecer los datos.' })
+    }
   }
 
   function limpiarDemo() {
@@ -90,9 +102,14 @@ export function PanelAdmin({ onSalir }: { onSalir: () => void }) {
             <h1 className="mt-3 font-serif text-3xl sm:text-4xl">Panel de reservas</h1>
             <p className="mt-2 text-sm text-gris">Los datos se guardan en este navegador (localStorage).</p>
           </div>
-          <Boton variante="suave" tamano="sm" onClick={onSalir}>
-            <LogOut size={15} aria-hidden="true" /> Cerrar sesión
-          </Boton>
+          <div className="flex gap-2">
+            <BotonLink to="/documentacion" variante="suave" tamano="sm" className="flex-1 sm:flex-none">
+              <BookOpen size={15} aria-hidden="true" /> Documentación
+            </BotonLink>
+            <Boton variante="suave" tamano="sm" onClick={onSalir} className="flex-1 sm:flex-none">
+              <LogOut size={15} aria-hidden="true" /> Cerrar sesión
+            </Boton>
+          </div>
         </div>
       </header>
 
@@ -161,19 +178,29 @@ export function PanelAdmin({ onSalir }: { onSalir: () => void }) {
           }
         </div>
 
-        {cantidadDemo > 0 && (
-          <section className="mt-16 flex flex-col gap-4 rounded-sm border border-dashed border-stone-300 p-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-sm font-medium">Datos de demostración</h2>
-              <p className="mt-1 text-[13px] text-gris">
-                Hay {cantidadDemo} registro(s) de ejemplo (marcados como “demo”). Podés quitarlos sin afectar los datos reales.
-              </p>
-            </div>
-            <Boton variante="suave" tamano="sm" onClick={() => setConfirmarLimpieza(true)}>
-              Quitar datos de demostración
+        <section aria-labelledby="titulo-datos-demo" className="mt-16 rounded-sm border border-dashed border-stone-300 p-5">
+          <h2 id="titulo-datos-demo" className="text-sm font-medium">
+            Datos de demostración
+          </h2>
+          <p className="mt-1 text-[13px] text-gris">
+            {cantidadDemo > 0
+              ? `Hay ${cantidadDemo} registro(s) de ejemplo (marcados como “demo”).`
+              : 'No quedan reservas ni bloqueos de ejemplo.'}{' '}
+            Más detalles en la{' '}
+            <Link to="/documentacion#datos-demo" className="underline underline-offset-2">
+              documentación
+            </Link>
+            .
+          </p>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <Boton variante="suave" tamano="sm" onClick={() => setConfirmarLimpieza(true)} disabled={cantidadDemo === 0}>
+              <Eraser size={14} aria-hidden="true" /> Quitar datos de demostración
             </Boton>
-          </section>
-        )}
+            <Boton variante="suave" tamano="sm" onClick={() => setConfirmarRestablecer(true)}>
+              <RotateCcw size={14} aria-hidden="true" /> Restablecer todo a los datos de demostración
+            </Boton>
+          </div>
+        </section>
       </div>
 
       <DialogoConfirmacion
@@ -184,6 +211,21 @@ export function PanelAdmin({ onSalir }: { onSalir: () => void }) {
         peligro
         onConfirmar={limpiarDemo}
         onCancelar={() => setConfirmarLimpieza(false)}
+      />
+      <DialogoConfirmacion
+        abierto={confirmarRestablecer}
+        titulo="¿Restablecer todo?"
+        descripcion={
+          <>
+            Se borran <strong className="text-tinta">todas</strong> las reservas y bloqueos (también los reales), el horario de
+            trabajo, los cambios en servicios, la galería y las etiquetas, y se vuelven a cargar los datos de demostración. El
+            correo y la contraseña de la cuenta no cambian. No se puede deshacer.
+          </>
+        }
+        textoConfirmar="Sí, restablecer todo"
+        peligro
+        onConfirmar={restablecer}
+        onCancelar={() => setConfirmarRestablecer(false)}
       />
     </div>
   )

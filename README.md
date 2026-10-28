@@ -55,7 +55,9 @@ Todos los datos editables están en **`src/config.ts`**:
 | `/confirmacion/:id` | Resumen de la solicitud (con horario) y botón para preparar el mensaje de WhatsApp |
 | `/contacto` | Datos de contacto y formulario que abre WhatsApp con el mensaje redactado |
 | `/politicas` | Estructura de políticas (contenido provisional, pendiente de redacción) |
-| `/admin` | Acceso con clave y panel con seis pestañas (ver abajo) |
+| `/admin` | Acceso con contraseña y panel de administración (ver abajo) |
+| `/admin/restablecer` | Página del enlace para elegir una contraseña nueva |
+| `/documentacion` | Manual completo de uso y configuración (requiere la contraseña del panel) |
 
 ### Panel de administración
 
@@ -117,9 +119,14 @@ En la primera carga, **y solo si las claves no existen**, se crean:
 
 - 6 reservas ficticias con horario (códigos `LB-DEMO01` a `LB-DEMO06`), con fechas futuras relativas al día de la primera carga: pendientes, confirmadas y una cancelada.
 - 3 bloqueos: dos de día completo (“Descanso personal”, “Fecha no laborable”) y una franja de 15:00 a 19:00 (“Compromiso profesional”).
-- Las 4 etiquetas iniciales (Bodas, Retratos, Familias, Eventos) y 14 fotos de galería.
+- Las 4 etiquetas iniciales (Bodas, Retratos, Familias, Eventos) y 15 fotos de galería.
 
-Todos llevan `esDemo: true` y datos de prueba (dominio `ejemplo.com`, teléfonos `+595 900 000 1xx`). Desde el panel se pueden quitar con **“Quitar datos de demostración”**, sin tocar los datos reales. Para empezar de cero, borrá las claves `leandro_baez_*` desde las herramientas del navegador.
+Las reservas y los bloqueos de ejemplo llevan `esDemo: true` y datos de prueba (dominio `ejemplo.com`, teléfonos `+595 900 000 1xx`). En el recuadro **“Datos de demostración”** del panel hay dos opciones:
+
+- **Quitar datos de demostración**: borra solo las reservas y los bloqueos de ejemplo. Los datos reales no se tocan.
+- **Restablecer todo a los datos de demostración**: borra todas las reservas y bloqueos (también los reales), el horario, los cambios de servicios, la galería y las etiquetas, y vuelve a cargar los ejemplos. La cuenta (correo y contraseña) no cambia.
+
+Para empezar de cero incluida la cuenta, borrá las claves `leandro_baez_*` desde las herramientas del navegador (F12 → Aplicación → Almacenamiento local) y recargá la página. El paso a paso está en `/documentacion`.
 
 ## Limitaciones de esta versión
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { PREFIJO } from '../lib/almacenamiento'
 import { hoyISO } from '../lib/fechas'
 import * as catalogo from '../services/catalogo'
+import { restablecerDatosDemo } from '../services/datosDemo'
 import * as servicio from '../services/reservas'
 import { ContextoDatos, type ValorDatos } from './contextoDatos'
 
@@ -85,6 +86,7 @@ export function ProveedorDatos({ children, avisoInicial }: { children: ReactNode
       bloquear: conRefresco(servicio.bloquear),
       eliminarBloqueo: conRefresco(servicio.eliminarBloqueo),
       eliminarDatosDemo: conRefresco(servicio.eliminarDatosDemo),
+      restablecerDatosDemo: conRefresco(restablecerDatosDemo),
       actualizarServicio: conRefresco(catalogo.actualizarServicio),
       actualizarHorario: conRefresco(catalogo.actualizarHorario),
       crearEtiqueta: conRefresco(catalogo.crearEtiqueta),

@@ -4,7 +4,7 @@
  * Todos los registros llevan esDemo: true para poder quitarlos después.
  */
 import { SERVICIOS_BASE, type ServicioId } from '../data/servicios'
-import { CLAVES, escribirLista, escribirObjeto, existeClave } from '../lib/almacenamiento'
+import { CLAVES, eliminarClave, escribirLista, escribirObjeto, existeClave } from '../lib/almacenamiento'
 import { hoyISO, sumarDias } from '../lib/fechas'
 import { JORNADA, sumarHoras } from '../lib/horas'
 import type { EstadoReserva, FechaBloqueada, Reserva } from '../types'
@@ -43,6 +43,27 @@ const BLOQUEOS_DEMO: { dias: number; motivo: string; horaInicio?: string; horaFi
 
 function haceDias(dias: number): string {
   return new Date(Date.now() - dias * 86_400_000).toISOString()
+}
+
+/** Claves de contenido que vuelven a su estado inicial al restablecer la demo. */
+const CLAVES_DE_CONTENIDO = [
+  CLAVES.reservas,
+  CLAVES.bloqueos,
+  CLAVES.servicios,
+  CLAVES.etiquetas,
+  CLAVES.galeria,
+  CLAVES.horario,
+  CLAVES.configuracion,
+]
+
+/**
+ * Borra reservas, bloqueos, servicios, horario, galería y etiquetas y vuelve
+ * a crear los datos de demostración. La cuenta (correo y contraseña) no se toca.
+ */
+export function restablecerDatosDemo(): void {
+  CLAVES_DE_CONTENIDO.forEach(eliminarClave)
+  const aviso = inicializarDatosDemo()
+  if (aviso) throw new Error(aviso)
 }
 
 /** Inicializa los datos de ejemplo una sola vez. Devuelve un aviso si no se pudo. */
