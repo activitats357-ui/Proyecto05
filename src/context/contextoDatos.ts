@@ -17,6 +17,8 @@ export interface ValorDatos {
   servicios: Servicio[]
   etiquetas: Etiqueta[]
   galeria: FotoGaleria[]
+  /** Horario de trabajo: los turnos deben empezar y terminar dentro de él. */
+  horario: FranjaHoraria
   /** Fecha actual (YYYY-MM-DD); se recalcula al volver a la pestaña. */
   hoy: string
   /** Avisos de almacenamiento (datos dañados, errores de lectura). */
@@ -35,6 +37,7 @@ export interface ValorDatos {
   eliminarDatosDemo: () => { reservas: number; bloqueos: number }
 
   actualizarServicio: (id: ServicioId, nombre: string, duracionHoras: number) => Servicio
+  actualizarHorario: (horaInicio: string, horaFin: string) => FranjaHoraria
   crearEtiqueta: (nombre: string) => Etiqueta
   renombrarEtiqueta: (id: string, nombre: string) => Etiqueta
   eliminarEtiqueta: (id: string) => number

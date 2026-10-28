@@ -4,8 +4,18 @@
  */
 import { ETIQUETAS_INICIALES, GALERIA_INICIAL } from '../data/fotos'
 import { esServicioId, SERVICIOS_BASE, type Servicio, type ServicioId } from '../data/servicios'
-import { CLAVES, escribirLista, existeClave, leerLista, type ResultadoLectura } from '../lib/almacenamiento'
-import { DURACION_MAXIMA_HORAS, DURACION_MINIMA_HORAS, JORNADA } from '../lib/horas'
+import { CONFIG } from '../config'
+import { CLAVES, escribirLista, escribirObjeto, existeClave, leerLista, leerObjeto, type ResultadoLectura } from '../lib/almacenamiento'
+import {
+  aMinutos,
+  DURACION_MINIMA_HORAS,
+  duracionMaximaHoras,
+  esHoraValida,
+  fijarJornada,
+  formatearDuracion,
+  JORNADA,
+} from '../lib/horas'
+import type { FranjaHoraria } from '../types'
 import type { Etiqueta, FotoGaleria } from '../types'
 
 export class ErrorCatalogo extends Error {
@@ -16,6 +26,44 @@ export class ErrorCatalogo extends Error {
 }
 
 const esTexto = (v: unknown): v is string => typeof v === 'string'
+
+// ---------- Horario de trabajo ----------
+
+function esHorario(x: unknown): x is FranjaHoraria {
+  if (typeof x !== 'object' || x === null) return false
+  const h = x as Record<string, unknown>
+  return esHoraValida(h.horaInicio) && esHoraValida(h.horaFin) && h.horaInicio < h.horaFin
+}
+
+/**
+ * Lee el horario de trabajo guardado (o el de config.ts) y lo aplica a las
+ * reglas de turnos. Se llama antes de cualquier cálculo de disponibilidad.
+ */
+export function leerHorario(): { dato: FranjaHoraria; aviso?: string } {
+  const r = leerObjeto(CLAVES.horario, esHorario)
+  const dato = r.dato ?? { horaInicio: CONFIG.agenda.horaInicio, horaFin: CONFIG.agenda.horaFin }
+  fijarJornada(dato.horaInicio, dato.horaFin)
+  return { dato, aviso: r.aviso }
+}
+
+export function validarHorario(horaInicio: string, horaFin: string, servicios: Servicio[]): string | null {
+  if (!esHoraValida(horaInicio) || !esHoraValida(horaFin)) return 'Elegí la hora de apertura y la de cierre.'
+  if (horaFin <= horaInicio) return 'La hora de cierre tiene que ser posterior a la de apertura.'
+  const horas = (aMinutos(horaFin) - aMinutos(horaInicio)) / 60
+  const masLargo = servicios.reduce((a, b) => (b.duracionHoras > a.duracionHoras ? b : a))
+  if (masLargo.duracionHoras > horas) {
+    return `El horario (${formatearDuracion(horas)}) es más corto que “${masLargo.nombre}” (${formatearDuracion(masLargo.duracionHoras)}). Ampliá el horario o reducí la duración del servicio.`
+  }
+  return null
+}
+
+export function actualizarHorario(horaInicio: string, horaFin: string): FranjaHoraria {
+  const error = validarHorario(horaInicio, horaFin, leerServicios().datos)
+  if (error) throw new ErrorCatalogo(error)
+  escribirObjeto(CLAVES.horario, { horaInicio, horaFin })
+  fijarJornada(horaInicio, horaFin)
+  return { horaInicio, horaFin }
+}
 
 // ---------- Servicios ----------
 
@@ -48,9 +96,9 @@ export function validarServicio(nombre: string, duracionHoras: number): { nombre
   const n = nombre.trim()
   if (!n) errores.nombre = 'Escribí un nombre para el servicio.'
   else if (n.length > MAX_NOMBRE_SERVICIO) errores.nombre = `Usá como máximo ${MAX_NOMBRE_SERVICIO} caracteres.`
-  if (!Number.isFinite(duracionHoras) || duracionHoras < DURACION_MINIMA_HORAS || duracionHoras > DURACION_MAXIMA_HORAS) {
+  if (!Number.isFinite(duracionHoras) || duracionHoras < DURACION_MINIMA_HORAS || duracionHoras > duracionMaximaHoras()) {
     const num = (n: number) => n.toLocaleString('es')
-    errores.duracion = `La duración tiene que estar entre ${num(DURACION_MINIMA_HORAS)} y ${num(DURACION_MAXIMA_HORAS)} horas.`
+    errores.duracion = `La duración tiene que estar entre ${num(DURACION_MINIMA_HORAS)} y ${num(duracionMaximaHoras())} horas (el largo del horario de trabajo).`
   } else if (!Number.isInteger((duracionHoras * 60) / JORNADA.paso)) {
     errores.duracion = `Usá múltiplos de ${JORNADA.paso} minutos (por ejemplo 1, 1,5 o 2 horas).`
   }
@@ -58,6 +106,7 @@ export function validarServicio(nombre: string, duracionHoras: number): { nombre
 }
 
 export function actualizarServicio(id: ServicioId, nombre: string, duracionHoras: number): Servicio {
+  leerHorario()
   const errores = validarServicio(nombre, duracionHoras)
   const primero = errores.nombre ?? errores.duracion
   if (primero) throw new ErrorCatalogo(primero)

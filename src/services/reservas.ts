@@ -5,11 +5,10 @@
  * localStorage justo antes de guardar, para detectar cambios hechos desde
  * otra pestaña o formulario.
  */
-import { CONFIG } from '../config'
 import { esServicioId } from '../data/servicios'
 import { CLAVES, escribirLista, leerLista, type ResultadoLectura } from '../lib/almacenamiento'
 import { aFechaISO, esFechaISOValida, esPasada, formatearFechaLarga } from '../lib/fechas'
-import { aHora, aMinutos, esHoraValida, JORNADA, minutosDe, solapan, sumarHoras, type Intervalo } from '../lib/horas'
+import { aHora, aMinutos, esHoraValida, JORNADA, minutosDe, solapan, sumarHoras, textoJornada, type Intervalo } from '../lib/horas'
 import { validarDatosReserva, type ErroresReserva } from '../lib/validacion'
 import {
   ESTADOS_RESERVA,
@@ -22,7 +21,7 @@ import {
   type FranjaHoraria,
   type Reserva,
 } from '../types'
-import { leerServicios } from './catalogo'
+import { leerHorario, leerServicios } from './catalogo'
 
 export type CodigoErrorReserva = 'VALIDACION' | 'NO_DISPONIBLE' | 'NO_ENCONTRADA' | 'CONFLICTO'
 
@@ -84,8 +83,8 @@ function esBloqueoGuardado(x: unknown): x is BloqueoGuardado {
 function normalizarReserva(r: ReservaGuardada): Reserva {
   return {
     ...r,
-    horaInicio: r.horaInicio && r.horaFin ? r.horaInicio : CONFIG.agenda.horaInicio,
-    horaFin: r.horaInicio && r.horaFin ? r.horaFin : CONFIG.agenda.horaFin,
+    horaInicio: r.horaInicio && r.horaFin ? r.horaInicio : aHora(JORNADA.inicio),
+    horaFin: r.horaInicio && r.horaFin ? r.horaFin : aHora(JORNADA.fin),
   }
 }
 
@@ -222,7 +221,7 @@ export function comprobarTurno(
   if (!esHoraValida(horaInicio) || !esHoraValida(horaFin)) return 'El horario no es válido.'
   const franja = { inicio: aMinutos(horaInicio), fin: aMinutos(horaFin) }
   if (franja.inicio < JORNADA.inicio || franja.fin > JORNADA.fin || franja.fin <= franja.inicio) {
-    return `El turno tiene que estar entre las ${CONFIG.agenda.horaInicio} y las ${CONFIG.agenda.horaFin} h.`
+    return `El turno tiene que empezar y terminar dentro del horario de trabajo (${textoJornada()}).`
   }
   if (fecha === hoy && franja.inicio <= minutosDe(ahora)) return 'Ese horario ya pasó. Elegí otro horario.'
   if (bloqueoDiaCompleto(fecha, bloqueos)) return 'Esa fecha no está disponible para reservas. Elegí otra fecha.'
@@ -253,6 +252,7 @@ export function crearReserva(entrada: DatosNuevaReserva): Reserva {
     notas: entrada.notas.trim(),
   }
   const ahora = new Date()
+  leerHorario()
   const errores = validarDatosReserva(datos, aFechaISO(ahora))
   if (Object.keys(errores).length > 0) {
     throw new ErrorReserva('VALIDACION', 'Revisá los datos marcados antes de confirmar.', errores)
@@ -307,6 +307,7 @@ export function cambiarEstadoReserva(id: string, nuevoEstado: EstadoReserva): Re
 
 /** Bloquea el día completo (franja null) o una franja horaria. */
 export function bloquear(fecha: string, franja: FranjaHoraria | null, motivo?: string): FechaBloqueada {
+  leerHorario()
   if (!esFechaISOValida(fecha)) throw new ErrorReserva('VALIDACION', 'Elegí una fecha válida.')
   if (esPasada(fecha, aFechaISO(new Date()))) throw new ErrorReserva('VALIDACION', 'No se pueden bloquear fechas pasadas.')
   if (franja) {
@@ -316,7 +317,7 @@ export function bloquear(fecha: string, franja: FranjaHoraria | null, motivo?: s
     const { inicio, fin } = intervaloDe(franja)
     if (fin <= inicio) throw new ErrorReserva('VALIDACION', 'La hora de fin tiene que ser posterior a la de inicio.')
     if (inicio < JORNADA.inicio || fin > JORNADA.fin) {
-      throw new ErrorReserva('VALIDACION', `La franja tiene que estar entre las ${CONFIG.agenda.horaInicio} y las ${CONFIG.agenda.horaFin} h.`)
+      throw new ErrorReserva('VALIDACION', `La franja tiene que estar dentro del horario de trabajo (${textoJornada()}).`)
     }
   }
   const motivoLimpio = motivo?.trim().slice(0, MAX_MOTIVO_BLOQUEO) || undefined

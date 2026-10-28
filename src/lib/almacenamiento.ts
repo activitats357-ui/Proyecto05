@@ -12,6 +12,7 @@ export const CLAVES = {
   servicios: `${PREFIJO}servicios`,
   etiquetas: `${PREFIJO}etiquetas`,
   galeria: `${PREFIJO}galeria`,
+  horario: `${PREFIJO}horario`,
 } as const
 
 /** Caracteres ocupados por las claves de la app (localStorage suele admitir unos 5 millones). */
@@ -116,6 +117,28 @@ export function leerLista<T>(clave: string, esValido: (x: unknown) => x is T): R
     }
   }
   return { datos: validos }
+}
+
+/** Lee un objeto JSON. Si está dañado, lo respalda y devuelve null con un aviso. */
+export function leerObjeto<T>(clave: string, esValido: (x: unknown) => x is T): { dato: T | null; aviso?: string } {
+  let crudo: string | null
+  try {
+    crudo = storage().getItem(clave)
+  } catch (e) {
+    return { dato: null, aviso: e instanceof Error ? e.message : 'No se pudo leer el almacenamiento local.' }
+  }
+  if (crudo === null) return { dato: null }
+  try {
+    const parseado: unknown = JSON.parse(crudo)
+    if (esValido(parseado)) return { dato: parseado }
+  } catch {
+    /* se trata igual que un formato inválido */
+  }
+  const destino = respaldar(clave, crudo)
+  return {
+    dato: null,
+    aviso: `Los datos guardados en "${clave}" no son válidos; se usan los valores por defecto.${destino ? ` Se guardó una copia en "${destino}".` : ''}`,
+  }
 }
 
 function escribir(clave: string, valor: unknown): void {

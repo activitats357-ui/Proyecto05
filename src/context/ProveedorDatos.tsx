@@ -6,6 +6,8 @@ import * as servicio from '../services/reservas'
 import { ContextoDatos, type ValorDatos } from './contextoDatos'
 
 function leerTodo() {
+  // El horario va primero: fija la jornada que usan las demás lecturas y cálculos.
+  const horario = catalogo.leerHorario()
   const lecturas = {
     reservas: servicio.leerReservas(),
     bloqueos: servicio.leerBloqueos(),
@@ -19,10 +21,9 @@ function leerTodo() {
     servicios: lecturas.servicios.datos,
     etiquetas: lecturas.etiquetas.datos,
     galeria: lecturas.galeria.datos,
+    horario: horario.dato,
     hoy: hoyISO(),
-    avisos: Object.values(lecturas)
-      .map((l) => l.aviso)
-      .filter((a): a is string => Boolean(a)),
+    avisos: [horario.aviso, ...Object.values(lecturas).map((l) => l.aviso)].filter((a): a is string => Boolean(a)),
   }
 }
 
@@ -85,6 +86,7 @@ export function ProveedorDatos({ children, avisoInicial }: { children: ReactNode
       eliminarBloqueo: conRefresco(servicio.eliminarBloqueo),
       eliminarDatosDemo: conRefresco(servicio.eliminarDatosDemo),
       actualizarServicio: conRefresco(catalogo.actualizarServicio),
+      actualizarHorario: conRefresco(catalogo.actualizarHorario),
       crearEtiqueta: conRefresco(catalogo.crearEtiqueta),
       renombrarEtiqueta: conRefresco(catalogo.renombrarEtiqueta),
       eliminarEtiqueta: conRefresco(catalogo.eliminarEtiqueta),

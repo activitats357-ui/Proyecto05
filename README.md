@@ -36,7 +36,7 @@ Todos los datos editables están en **`src/config.ts`**:
 | Correo público | `CONFIG.email` | Vacío (no se muestra) |
 | Clave del panel `/admin` | `CONFIG.admin.clave` | `leandro2026` |
 | Ubicación, cobertura y horarios | `CONFIG.ubicacion`, `CONFIG.cobertura`, `CONFIG.horario` | Datos reales del brief |
-| Jornada reservable | `CONFIG.agenda.horaInicio` / `horaFin` | 08:00 a 23:00 |
+| Horario de trabajo por defecto | `CONFIG.agenda.horaInicio` / `horaFin` | 08:00 a 22:00 (editable desde el panel) |
 | Separación entre horarios de inicio | `CONFIG.agenda.intervaloMinutos` | 30 minutos |
 
 - El número de WhatsApp va en formato internacional, sin `+` ni espacios. Si se deja vacío, los botones de WhatsApp se desactivan y se muestra un aviso.
@@ -62,13 +62,13 @@ Todos los datos editables están en **`src/config.ts`**:
 | Reservas | Resumen, próximas reservas, filtros y cambio de estado |
 | Agenda | Calendario de consulta: reservas y bloqueos de cada día y franjas libres |
 | Bloqueos | Bloquear un **día completo** o una **franja horaria**, con motivo; listar y eliminar bloqueos |
-| Servicios | Cambiar el **nombre** y la **duración en horas** de los 4 servicios |
+| Servicios | Definir el **horario de trabajo** (apertura y cierre) y cambiar el **nombre** y la **duración en horas** de los 4 servicios |
 | Galería | Subir fotos (se reducen a 1600 px) o agregarlas por URL, describirlas, etiquetarlas, ordenarlas y eliminarlas |
 | Etiquetas | Crear, renombrar y eliminar etiquetas (al eliminar una, se quita de las fotos) |
 
 ## Turnos y reglas de disponibilidad
 
-Cada reserva ocupa un **turno**: hora de inicio + duración del servicio. Los horarios de inicio se ofrecen cada 30 minutos dentro de la jornada. Las reglas viven en un solo lugar (`src/services/reservas.ts`) y las usan tanto el calendario público como el panel:
+Cada reserva ocupa un **turno**: hora de inicio + duración del servicio. Los horarios de inicio se ofrecen cada 30 minutos y **el turno completo tiene que caber dentro del horario de trabajo**: con cierre a las 22:00, una sesión de 1 hora puede empezar como máximo a las 21:00. El horario no puede ser más corto que el servicio más largo; si se acorta, las reservas ya registradas que queden fuera se mantienen. Las reglas viven en un solo lugar (`src/services/reservas.ts`) y las usan tanto el calendario público como el panel:
 
 1. Las reservas `pendiente` y `confirmada` ocupan su franja; las `canceladas` no.
 2. Un bloqueo puede ser de **día completo** o de una **franja horaria**.
@@ -88,6 +88,7 @@ Las fechas se manejan como cadenas `YYYY-MM-DD` y las horas como `HH:MM`, siempr
 | `leandro_baez_reservas` | Lista de reservas (`Reserva[]`) |
 | `leandro_baez_fechas_bloqueadas` | Bloqueos de día completo o de franja (`FechaBloqueada[]`) |
 | `leandro_baez_servicios` | Nombre y duración modificados de cada servicio |
+| `leandro_baez_horario` | Horario de trabajo (`{ horaInicio, horaFin }`) |
 | `leandro_baez_etiquetas` | Etiquetas de la galería (`Etiqueta[]`) |
 | `leandro_baez_galeria` | Fotos de la galería (`FotoGaleria[]`); las subidas se guardan como imagen JPEG |
 | `leandro_baez_configuracion` | Metadatos (versión, fecha de inicialización) |

@@ -28,10 +28,13 @@ export const CONFIG = {
   // Correo de contacto público. Vacío = no se muestra.
   email: '',
 
-  /** Jornada en la que se pueden reservar turnos. */
+  /**
+   * Horario de trabajo por defecto: los turnos deben empezar y terminar
+   * dentro de este rango. Se puede cambiar desde /admin (pestaña Servicios).
+   */
   agenda: {
     horaInicio: '08:00',
-    horaFin: '23:00',
+    horaFin: '22:00',
     // Separación entre horarios de inicio y unidad mínima de duración.
     intervaloMinutos: 30,
   },

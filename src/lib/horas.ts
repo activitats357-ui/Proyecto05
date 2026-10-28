@@ -26,14 +26,39 @@ export function aHora(minutos: number): string {
   return `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`
 }
 
+/**
+ * Horario de trabajo vigente, en minutos. Arranca con los valores de
+ * config.ts y se actualiza con fijarJornada() al leer el horario guardado
+ * desde el panel. Ningún turno ni bloqueo puede salirse de este rango.
+ */
 export const JORNADA = {
   inicio: aMinutos(CONFIG.agenda.horaInicio),
   fin: aMinutos(CONFIG.agenda.horaFin),
   paso: CONFIG.agenda.intervaloMinutos,
 }
 
+export function fijarJornada(horaInicio: string, horaFin: string): void {
+  JORNADA.inicio = aMinutos(horaInicio)
+  JORNADA.fin = aMinutos(horaFin)
+}
+
 export const DURACION_MINIMA_HORAS = JORNADA.paso / 60
-export const DURACION_MAXIMA_HORAS = (JORNADA.fin - JORNADA.inicio) / 60
+
+export function duracionMaximaHoras(): number {
+  return (JORNADA.fin - JORNADA.inicio) / 60
+}
+
+/** "08:00 a 22:00 h" para el horario de trabajo vigente. */
+export function textoJornada(): string {
+  return formatearFranja(aHora(JORNADA.inicio), aHora(JORNADA.fin))
+}
+
+/** Todas las horas del día a intervalos regulares (00:00 a 24:00). */
+export function horasDelDia(): string[] {
+  const horas: string[] = []
+  for (let m = 0; m <= 24 * 60; m += JORNADA.paso) horas.push(aHora(m))
+  return horas
+}
 
 export function solapan(a: Intervalo, b: Intervalo): boolean {
   return a.inicio < b.fin && b.inicio < a.fin
@@ -45,13 +70,6 @@ export function minutosDe(fecha: Date): number {
 
 export function sumarHoras(hora: string, horas: number): string {
   return aHora(aMinutos(hora) + Math.round(horas * 60))
-}
-
-/** Horas de la jornada a intervalos regulares, incluidas la de inicio y la de fin. */
-export function horasDeLaJornada(): string[] {
-  const horas: string[] = []
-  for (let m = JORNADA.inicio; m <= JORNADA.fin; m += JORNADA.paso) horas.push(aHora(m))
-  return horas
 }
 
 /** "1 hora", "8 horas", "1 h 30 min", "30 minutos" */

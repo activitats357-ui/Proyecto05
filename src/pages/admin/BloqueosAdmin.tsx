@@ -6,16 +6,17 @@ import { DialogoConfirmacion } from '../../components/Dialogo'
 import { useDatos } from '../../context/contextoDatos'
 import { cx } from '../../lib/cx'
 import { formatearFechaCorta, formatearFechaLarga } from '../../lib/fechas'
-import { formatearFranja, horasDeLaJornada } from '../../lib/horas'
+import { formatearFranja, horasDelDia, textoJornada } from '../../lib/horas'
 import { MAX_MOTIVO_BLOQUEO } from '../../services/reservas'
 import type { FechaBloqueada } from '../../types'
 import type { Mensaje } from './PanelAdmin'
 
 type Tipo = 'dia' | 'franja'
-const HORAS = horasDeLaJornada()
 
 export function BloqueosAdmin({ onMensaje }: { onMensaje: (m: Mensaje | null) => void }) {
-  const { bloqueos, hoy, bloquear, eliminarBloqueo } = useDatos()
+  const { bloqueos, hoy, horario, bloquear, eliminarBloqueo } = useDatos()
+  // Solo se ofrecen horas dentro del horario de trabajo vigente.
+  const HORAS = horasDelDia().filter((h) => h >= horario.horaInicio && h <= horario.horaFin)
   const [fecha, setFecha] = useState('')
   const [tipo, setTipo] = useState<Tipo>('dia')
   const [desde, setDesde] = useState(HORAS[2] ?? HORAS[0])
@@ -70,7 +71,10 @@ export function BloqueosAdmin({ onMensaje }: { onMensaje: (m: Mensaje | null) =>
         <h2 id="titulo-nuevo-bloqueo" className="font-serif text-2xl">
           Nuevo bloqueo
         </h2>
-        <p className="mt-1 text-sm text-gris">Bloqueá un día entero o solo unas horas. No se puede bloquear sobre una reserva activa.</p>
+        <p className="mt-1 text-sm text-gris">
+          Bloqueá un día entero o solo unas horas del horario de trabajo ({textoJornada()}). No se puede bloquear sobre una
+          reserva activa.
+        </p>
         <form onSubmit={enviar} noValidate className="mt-6 space-y-5">
           <Campo id="bloqueo-fecha" etiqueta="Fecha" obligatorio error={errorFecha}>
             {(p) => <input {...p} type="date" min={hoy} value={fecha} onChange={(e) => setFecha(e.target.value)} className="control" />}

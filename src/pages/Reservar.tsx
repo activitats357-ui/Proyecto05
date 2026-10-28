@@ -32,7 +32,7 @@ export default function Reservar() {
   useTituloPagina('Reservar una fecha')
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const { hoy, servicios, buscarServicio, horariosDisponibles, crearReserva } = useDatos()
+  const { hoy, horario, servicios, buscarServicio, horariosDisponibles, crearReserva } = useDatos()
 
   const servicioUrl = params.get('servicio')
   const servicioInicial = esServicioId(servicioUrl) ? servicioUrl : null
@@ -269,7 +269,9 @@ export default function Reservar() {
                   <legend className="sr-only">Horario de inicio</legend>
                   <p className="font-serif text-xl">Horario de inicio</p>
                   <p className="mt-1 text-sm text-gris">
-                    {formatearFechaLarga(fecha)} · Sesión de {formatearDuracion(servicio.duracionHoras)}
+                    {formatearFechaLarga(fecha)} · Sesión de {formatearDuracion(servicio.duracionHoras)}. Horario de
+                    atención de {formatearFranja(horario.horaInicio, horario.horaFin)}: la sesión tiene que terminar antes del
+                    cierre.
                   </p>
                   <div className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
                     {horarios.map((h) => (
