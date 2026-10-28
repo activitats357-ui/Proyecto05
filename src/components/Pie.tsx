@@ -67,11 +67,6 @@ export function Pie() {
                 Políticas y condiciones
               </Link>
             </li>
-            <li>
-              <Link to="/admin" className="text-stone-600 hover:text-tinta">
-                Acceso administración
-              </Link>
-            </li>
           </ul>
         </div>
       </div>

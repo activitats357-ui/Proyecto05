@@ -24,7 +24,7 @@ const SECCIONES = [
   { id: 'cuenta', titulo: 'Contraseña y perfil' },
   { id: 'correo', titulo: 'Configurar el envío de correo' },
   { id: 'configuracion', titulo: 'Configuración general' },
-  { id: 'datos-demo', titulo: 'Datos de demostración' },
+  { id: 'datos-demo', titulo: 'Datos de muestra: cómo resetearlos' },
   { id: 'almacenamiento', titulo: 'Dónde se guardan los datos' },
   { id: 'publicacion', titulo: 'Instalación y publicación' },
   { id: 'problemas', titulo: 'Solución de problemas' },
@@ -143,8 +143,9 @@ function ContenidoDocumentacion() {
 
           <Seccion id="panel" n={4}>
             <p>
-              Se entra desde <Codigo>/admin</Codigo> (también hay un enlace “Acceso administración” en el pie de página). La
-              sesión dura mientras la pestaña esté abierta; el botón <strong>Cerrar sesión</strong> la termina.
+              Se entra escribiendo la dirección <Codigo>/admin</Codigo> en el navegador (por ejemplo,{' '}
+              <Codigo>{`${window.location.origin}/admin`}</Codigo>). No hay ningún enlace visible en la web pública. La sesión
+              dura mientras la pestaña esté abierta; el botón <strong>Cerrar sesión</strong> la termina.
             </p>
             <Tabla
               columnas={['Pestaña', 'Para qué sirve']}
@@ -293,6 +294,28 @@ export async function enviarCorreo(correo: Correo): Promise<ResultadoEnvio> {
           </Seccion>
 
           <Seccion id="datos-demo" n={8}>
+            <p>Hay tres formas de resetear los datos de muestra, según lo que quieras conservar:</p>
+            <Tabla
+              columnas={['Quiero…', 'Opción', 'Qué se borra']}
+              filas={[
+                [
+                  'Sacar los ejemplos y quedarme con lo real',
+                  <a href="#reset-quitar" className="underline underline-offset-2">1. Quitar datos de demostración</a>,
+                  'Solo las reservas y bloqueos marcados como demo.',
+                ],
+                [
+                  'Volver la web al estado inicial',
+                  <a href="#reset-todo" className="underline underline-offset-2">2. Restablecer todo</a>,
+                  'Todas las reservas y bloqueos, horario, servicios, galería y etiquetas. La cuenta no cambia.',
+                ],
+                [
+                  'Empezar completamente de cero, también la contraseña',
+                  <a href="#reset-manual" className="underline underline-offset-2">3. Borrado manual</a>,
+                  'Todo lo guardado por la web en ese navegador.',
+                ],
+              ]}
+            />
+            <Subtitulo>Qué datos de muestra trae la web</Subtitulo>
             <p>La primera vez que se abre la web en un navegador se cargan datos de ejemplo:</p>
             <Lista
               items={[
@@ -305,23 +328,24 @@ export async function enviarCorreo(correo: Correo): Promise<ResultadoEnvio> {
               Las reservas y bloqueos de ejemplo llevan la marca “demo” en el panel, y sus datos de contacto son de prueba
               (dominio ejemplo.com). Solo se cargan si no hay datos guardados: nunca pisan datos existentes.
             </p>
-            <Subtitulo>Quitar solo los datos de ejemplo</Subtitulo>
+            <Subtitulo id="reset-quitar">Opción 1 · Quitar solo los datos de ejemplo</Subtitulo>
             <Pasos
               items={[
-                'En el panel, bajá hasta el recuadro “Datos de demostración”.',
+                'Entrá al panel (/admin) y bajá hasta el final de la página, al recuadro “Datos de demostración”.',
                 'Tocá “Quitar datos de demostración” y confirmá.',
                 'Se borran solo las reservas y bloqueos marcados como demo. Las solicitudes reales, la galería y la configuración no cambian.',
               ]}
             />
-            <Subtitulo>Restablecer todo a los datos de demostración</Subtitulo>
+            <Subtitulo id="reset-todo">Opción 2 · Restablecer todo a los datos de demostración</Subtitulo>
             <Pasos
               items={[
-                'En el mismo recuadro, tocá “Restablecer todo a los datos de demostración”.',
+                'Entrá al panel (/admin) y bajá hasta el recuadro “Datos de demostración”.',
+                'Tocá “Restablecer todo a los datos de demostración”.',
                 'Confirmá. Se borran todas las reservas y bloqueos (también los reales), el horario de trabajo, los cambios de servicios, la galería y las etiquetas, y se vuelven a cargar los ejemplos.',
                 'El correo y la contraseña de la cuenta no cambian.',
               ]}
             />
-            <Subtitulo>Empezar de cero a mano (también la cuenta)</Subtitulo>
+            <Subtitulo id="reset-manual">Opción 3 · Borrado manual desde el navegador (también la cuenta)</Subtitulo>
             <Pasos
               items={[
                 'Abrí las herramientas del navegador (F12) → pestaña Aplicación (Application) → Almacenamiento local (Local Storage) → el dominio de la web.',
@@ -431,8 +455,12 @@ function Seccion({ id, n, children }: { id: string; n: number; children: ReactNo
   )
 }
 
-function Subtitulo({ children }: { children: ReactNode }) {
-  return <h3 className="mt-8 mb-3 font-serif text-xl text-tinta">{children}</h3>
+function Subtitulo({ children, id }: { children: ReactNode; id?: string }) {
+  return (
+    <h3 id={id} className="mt-8 mb-3 scroll-mt-28 font-serif text-xl text-tinta">
+      {children}
+    </h3>
+  )
 }
 
 function Codigo({ children }: { children: ReactNode }) {

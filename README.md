@@ -15,15 +15,36 @@ Funciona **íntegramente en el navegador**. Los datos se guardan en `localStorag
 
 ## Instalación y ejecución
 
-Requisitos: Node.js 20 o superior.
+Requisitos: [Node.js](https://nodejs.org/) 20 o superior (incluye `npm`) y Git.
+
+### Arrancar la aplicación en local
+
+1. Descargá el código:
+   ```bash
+   git clone https://github.com/activitats357-ui/Proyecto05.git
+   cd Proyecto05
+   ```
+2. Instalá las dependencias (solo la primera vez, o cuando cambie `package.json`):
+   ```bash
+   npm install
+   ```
+3. Arrancá el servidor de desarrollo:
+   ```bash
+   npm run dev
+   ```
+4. Abrí **http://localhost:5173** en el navegador. Los cambios en el código se ven al instante.
+5. El panel de administración está en **http://localhost:5173/admin** (no hay enlace visible en la web). La contraseña inicial está en `src/config.ts` (`CONFIG.admin.clave`).
+6. Para detener el servidor, presioná `Ctrl + C` en la terminal.
+
+### Otros comandos
 
 ```bash
-npm install
-npm run dev        # servidor de desarrollo en http://localhost:5173
-npm run build      # compilación de producción en dist/
-npm run preview    # sirve la compilación de producción
-npm run typecheck  # comprobación de tipos
+npm run build      # compila la versión de producción en dist/ (incluye la comprobación de tipos)
+npm run preview    # sirve la versión compilada para probarla
+npm run typecheck  # solo la comprobación de tipos
 ```
+
+La versión publicada está en Vercel: cada `git push` a la rama `main` se publica automáticamente (ver [Publicación](#publicación)).
 
 ## Configuración
 
@@ -114,7 +135,7 @@ Las fechas se manejan como cadenas `YYYY-MM-DD` y las horas como `HH:MM`, siempr
 - Los datos de la versión anterior (reservas sin horario) se migran solos: esas reservas ocupan la jornada completa.
 - localStorage admite unos 5 MB por sitio. El panel de galería muestra el espacio usado; cada foto subida ocupa unos 150–400 KB.
 
-## Datos de demostración
+## Datos de muestra y cómo resetearlos
 
 En la primera carga, **y solo si las claves no existen**, se crean:
 
@@ -122,12 +143,30 @@ En la primera carga, **y solo si las claves no existen**, se crean:
 - 3 bloqueos: dos de día completo (“Descanso personal”, “Fecha no laborable”) y una franja de 15:00 a 19:00 (“Compromiso profesional”).
 - Las 4 etiquetas iniciales (Bodas, Retratos, Familias, Eventos) y 15 fotos de galería.
 
-Las reservas y los bloqueos de ejemplo llevan `esDemo: true` y datos de prueba (dominio `ejemplo.com`, teléfonos `+595 900 000 1xx`). En el recuadro **“Datos de demostración”** del panel hay dos opciones:
+Las reservas y los bloqueos de ejemplo llevan `esDemo: true` y datos de prueba (dominio `ejemplo.com`, teléfonos `+595 900 000 1xx`).
 
-- **Quitar datos de demostración**: borra solo las reservas y los bloqueos de ejemplo. Los datos reales no se tocan.
-- **Restablecer todo a los datos de demostración**: borra todas las reservas y bloqueos (también los reales), el horario, los cambios de servicios, la galería y las etiquetas, y vuelve a cargar los ejemplos. La cuenta (correo y contraseña) no cambia.
+### Cómo resetear los datos de muestra
 
-Para empezar de cero incluida la cuenta, borrá las claves `leandro_baez_*` desde las herramientas del navegador (F12 → Aplicación → Almacenamiento local) y recargá la página. El paso a paso está en `/documentacion`.
+| Quiero… | Cómo | Qué se borra |
+| --- | --- | --- |
+| Sacar los ejemplos y quedarme con lo real | **Opción 1** | Solo las reservas y bloqueos marcados como demo |
+| Volver la web al estado inicial | **Opción 2** | Todas las reservas y bloqueos, horario, servicios, galería y etiquetas. La cuenta no cambia |
+| Empezar de cero, también la contraseña | **Opción 3** | Todo lo guardado por la web en ese navegador |
+
+**Opción 1 · Quitar datos de demostración**
+1. Entrá a `/admin` y bajá hasta el recuadro **“Datos de demostración”**, al final de la página.
+2. Tocá **“Quitar datos de demostración”** y confirmá.
+
+**Opción 2 · Restablecer todo a los datos de demostración**
+1. Entrá a `/admin` y bajá hasta el recuadro **“Datos de demostración”**.
+2. Tocá **“Restablecer todo a los datos de demostración”** y confirmá. Se borran todas las reservas y bloqueos (también los reales), el horario, los cambios de servicios, la galería y las etiquetas, y se vuelven a cargar los ejemplos. El correo y la contraseña de la cuenta no cambian.
+
+**Opción 3 · Borrado manual desde el navegador**
+1. Abrí las herramientas del navegador (`F12`) → pestaña **Aplicación** (*Application*) → **Almacenamiento local** (*Local Storage*) → el dominio de la web.
+2. Borrá todas las claves que empiezan con `leandro_baez_`. Al borrar `leandro_baez_cuenta` vuelven a valer la contraseña y el correo iniciales de `config.ts`.
+3. Recargá la página: se cargan de nuevo los datos de ejemplo.
+
+Cualquiera de las tres opciones afecta solo al navegador donde se hace. El mismo paso a paso está en `/documentacion`, sección *Datos de muestra: cómo resetearlos*.
 
 ## Limitaciones de esta versión
 
