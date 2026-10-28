@@ -8,7 +8,18 @@
 import { esServicioId } from '../data/servicios'
 import { CLAVES, escribirLista, leerLista, type ResultadoLectura } from '../lib/almacenamiento'
 import { aFechaISO, esFechaISOValida, esPasada, formatearFechaLarga } from '../lib/fechas'
-import { aHora, aMinutos, esHoraValida, JORNADA, minutosDe, solapan, sumarHoras, textoJornada, type Intervalo } from '../lib/horas'
+import {
+  aHora,
+  aMinutos,
+  esHoraValida,
+  JORNADA,
+  jornadaDe,
+  minutosDe,
+  solapan,
+  sumarHoras,
+  textoJornadaDe,
+  type Intervalo,
+} from '../lib/horas'
 import { validarDatosReserva, type ErroresReserva } from '../lib/validacion'
 import {
   ESTADOS_RESERVA,
@@ -79,13 +90,11 @@ function esBloqueoGuardado(x: unknown): x is BloqueoGuardado {
   )
 }
 
-/** Las reservas anteriores a los turnos horarios ocupan la jornada completa. */
+/** Las reservas anteriores a los turnos horarios ocupan la jornada completa de su día. */
 function normalizarReserva(r: ReservaGuardada): Reserva {
-  return {
-    ...r,
-    horaInicio: r.horaInicio && r.horaFin ? r.horaInicio : aHora(JORNADA.inicio),
-    horaFin: r.horaInicio && r.horaFin ? r.horaFin : aHora(JORNADA.fin),
-  }
+  if (r.horaInicio && r.horaFin) return { ...r, horaInicio: r.horaInicio, horaFin: r.horaFin }
+  const jornada = jornadaDe(r.fecha) ?? DIA_COMPLETO
+  return { ...r, horaInicio: aHora(jornada.inicio), horaFin: aHora(jornada.fin) }
 }
 
 function normalizarBloqueo(b: BloqueoGuardado): FechaBloqueada {
@@ -113,10 +122,11 @@ export function ocupaFecha(estado: EstadoReserva): boolean {
 
 export const esBloqueoDiaCompleto = (b: FechaBloqueada) => !b.horaInicio
 
+const DIA_COMPLETO: Intervalo = { inicio: 0, fin: 24 * 60 }
+
+/** Intervalo de una reserva o bloqueo; un bloqueo sin horas cubre el día entero. */
 export function intervaloDe(x: { horaInicio?: string; horaFin?: string }): Intervalo {
-  return x.horaInicio && x.horaFin
-    ? { inicio: aMinutos(x.horaInicio), fin: aMinutos(x.horaFin) }
-    : { inicio: JORNADA.inicio, fin: JORNADA.fin }
+  return x.horaInicio && x.horaFin ? { inicio: aMinutos(x.horaInicio), fin: aMinutos(x.horaFin) } : DIA_COMPLETO
 }
 
 export function reservasActivasDelDia(fecha: string, reservas: Reserva[], excluirId?: string): Reserva[] {
@@ -161,31 +171,33 @@ export function horariosDisponibles(
   ahora = new Date(),
 ): string[] {
   const hoy = aFechaISO(ahora)
-  if (esPasada(fecha, hoy) || bloqueoDiaCompleto(fecha, bloqueos)) return []
+  const jornada = jornadaDe(fecha)
+  if (!jornada || esPasada(fecha, hoy) || bloqueoDiaCompleto(fecha, bloqueos)) return []
   const duracion = Math.round(duracionHoras * 60)
   const minimo = fecha === hoy ? minutosDe(ahora) : -1
   const libres: string[] = []
-  for (let inicio = JORNADA.inicio; inicio + duracion <= JORNADA.fin; inicio += JORNADA.paso) {
+  for (let inicio = jornada.inicio; inicio + duracion <= jornada.fin; inicio += JORNADA.paso) {
     if (inicio <= minimo) continue
     if (!conflictoEnFranja(fecha, { inicio, fin: inicio + duracion }, reservas, bloqueos)) libres.push(aHora(inicio))
   }
   return libres
 }
 
-/** Tramos de la jornada sin reservas activas ni bloqueos. */
+/** Tramos del horario de ese día sin reservas activas ni bloqueos. */
 export function franjasLibres(fecha: string, reservas: Reserva[], bloqueos: FechaBloqueada[]): Intervalo[] {
-  if (bloqueoDiaCompleto(fecha, bloqueos)) return []
+  const jornada = jornadaDe(fecha)
+  if (!jornada || bloqueoDiaCompleto(fecha, bloqueos)) return []
   const ocupados = [...reservasActivasDelDia(fecha, reservas), ...bloqueosDelDia(fecha, bloqueos)]
     .map(intervaloDe)
     .sort((a, b) => a.inicio - b.inicio)
   const libres: Intervalo[] = []
-  let cursor = JORNADA.inicio
+  let cursor = jornada.inicio
   for (const o of ocupados) {
-    if (o.inicio > cursor) libres.push({ inicio: cursor, fin: o.inicio })
+    if (o.inicio > cursor) libres.push({ inicio: cursor, fin: Math.min(o.inicio, jornada.fin) })
     cursor = Math.max(cursor, o.fin)
   }
-  if (cursor < JORNADA.fin) libres.push({ inicio: cursor, fin: JORNADA.fin })
-  return libres
+  if (cursor < jornada.fin) libres.push({ inicio: cursor, fin: jornada.fin })
+  return libres.filter((l) => l.fin > l.inicio)
 }
 
 /**
@@ -200,6 +212,7 @@ export function estadoDeFecha(
   ahora = new Date(),
 ): EstadoDia {
   if (esPasada(fecha, aFechaISO(ahora))) return 'pasada'
+  if (!jornadaDe(fecha)) return 'cerrada'
   if (bloqueoDiaCompleto(fecha, bloqueos)) return 'bloqueada'
   if (horariosDisponibles(fecha, duracionHoras, reservas, bloqueos, ahora).length === 0) return 'ocupada'
   const hayOcupacion = reservasActivasDelDia(fecha, reservas).length > 0 || bloqueosDelDia(fecha, bloqueos).length > 0
@@ -220,8 +233,10 @@ export function comprobarTurno(
   if (esPasada(fecha, hoy)) return 'Esa fecha ya pasó. Elegí una fecha futura.'
   if (!esHoraValida(horaInicio) || !esHoraValida(horaFin)) return 'El horario no es válido.'
   const franja = { inicio: aMinutos(horaInicio), fin: aMinutos(horaFin) }
-  if (franja.inicio < JORNADA.inicio || franja.fin > JORNADA.fin || franja.fin <= franja.inicio) {
-    return `El turno tiene que empezar y terminar dentro del horario de trabajo (${textoJornada()}).`
+  const jornada = jornadaDe(fecha)
+  if (!jornada) return 'Ese día no se atiende. Elegí otra fecha.'
+  if (franja.inicio < jornada.inicio || franja.fin > jornada.fin || franja.fin <= franja.inicio) {
+    return `El turno tiene que empezar y terminar dentro del horario de ese día (${textoJornadaDe(fecha)}).`
   }
   if (fecha === hoy && franja.inicio <= minutosDe(ahora)) return 'Ese horario ya pasó. Elegí otro horario.'
   if (bloqueoDiaCompleto(fecha, bloqueos)) return 'Esa fecha no está disponible para reservas. Elegí otra fecha.'
@@ -310,14 +325,18 @@ export function bloquear(fecha: string, franja: FranjaHoraria | null, motivo?: s
   leerHorario()
   if (!esFechaISOValida(fecha)) throw new ErrorReserva('VALIDACION', 'Elegí una fecha válida.')
   if (esPasada(fecha, aFechaISO(new Date()))) throw new ErrorReserva('VALIDACION', 'No se pueden bloquear fechas pasadas.')
+  const jornada = jornadaDe(fecha)
+  if (!jornada) {
+    throw new ErrorReserva('VALIDACION', 'Ese día ya está cerrado según el horario semanal: no hace falta bloquearlo.')
+  }
   if (franja) {
     if (!esHoraValida(franja.horaInicio) || !esHoraValida(franja.horaFin)) {
       throw new ErrorReserva('VALIDACION', 'Elegí la hora de inicio y la de fin.')
     }
     const { inicio, fin } = intervaloDe(franja)
     if (fin <= inicio) throw new ErrorReserva('VALIDACION', 'La hora de fin tiene que ser posterior a la de inicio.')
-    if (inicio < JORNADA.inicio || fin > JORNADA.fin) {
-      throw new ErrorReserva('VALIDACION', `La franja tiene que estar dentro del horario de trabajo (${textoJornada()}).`)
+    if (inicio < jornada.inicio || fin > jornada.fin) {
+      throw new ErrorReserva('VALIDACION', `La franja tiene que estar dentro del horario de ese día (${textoJornadaDe(fecha)}).`)
     }
   }
   const motivoLimpio = motivo?.trim().slice(0, MAX_MOTIVO_BLOQUEO) || undefined

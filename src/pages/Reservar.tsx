@@ -11,7 +11,7 @@ import { urlFoto } from '../data/fotos'
 import { esServicioId, type ServicioId } from '../data/servicios'
 import { cx } from '../lib/cx'
 import { formatearFechaLarga, mesDeFecha } from '../lib/fechas'
-import { formatearDuracion, formatearFranja, sumarHoras } from '../lib/horas'
+import { formatearDuracion, formatearFranja, resumenHorario, sumarHoras, textoJornadaDe } from '../lib/horas'
 import { LIMITES, validarCampo, type CampoReserva } from '../lib/validacion'
 import { ErrorReserva } from '../services/reservas'
 
@@ -260,8 +260,9 @@ export default function Reservar() {
                 <LeyendaCalendario className="mt-6 border-t border-borde pt-5" />
               </div>
               <p className="mt-4 text-[13px] leading-relaxed text-gris">
-                Los días marcados como “Completa” no tienen lugar para un turno de {servicio ? formatearDuracion(servicio.duracionHoras) : 'esta duración'}.
-                La disponibilidad se guarda en este navegador y la confirmación final se coordina directamente con Leandro.
+                Horario de sesiones: {resumenHorario(horario)}. Los días marcados como “Completa” no tienen lugar para un turno
+                de {servicio ? formatearDuracion(servicio.duracionHoras) : 'esta duración'}. La disponibilidad se guarda en este
+                navegador y la confirmación final se coordina directamente con Leandro.
               </p>
 
               {fecha && servicio && (
@@ -269,9 +270,8 @@ export default function Reservar() {
                   <legend className="sr-only">Horario de inicio</legend>
                   <p className="font-serif text-xl">Horario de inicio</p>
                   <p className="mt-1 text-sm text-gris">
-                    {formatearFechaLarga(fecha)} · Sesión de {formatearDuracion(servicio.duracionHoras)}. Horario de
-                    atención de {formatearFranja(horario.horaInicio, horario.horaFin)}: la sesión tiene que terminar antes del
-                    cierre.
+                    {formatearFechaLarga(fecha)} · Sesión de {formatearDuracion(servicio.duracionHoras)}. Ese día se atiende
+                    de {textoJornadaDe(fecha)}: la sesión tiene que terminar antes del cierre.
                   </p>
                   <div className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
                     {horarios.map((h) => (

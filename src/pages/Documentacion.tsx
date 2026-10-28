@@ -4,6 +4,7 @@ import { Aviso } from '../components/Aviso'
 import { BotonLink } from '../components/Boton'
 import { useTituloPagina } from '../components/Varios'
 import { CONFIG } from '../config'
+import { horarioPorDefecto, resumenHorario } from '../lib/horas'
 import { RequiereAdmin } from './admin/Admin'
 
 /**
@@ -101,8 +102,9 @@ function ContenidoDocumentacion() {
             <p>
               Cada reserva ocupa un <strong>turno</strong>: hora de inicio + duración del servicio. Los horarios de inicio se
               ofrecen cada {CONFIG.agenda.intervaloMinutos} minutos y el turno completo tiene que caber dentro del{' '}
-              <strong>horario de trabajo</strong>. Ejemplo: con cierre a las 22:00, una sesión de 1 hora puede empezar como
-              máximo a las 21:00 y una de 8 horas, a las 14:00.
+              <strong>horario de trabajo de ese día</strong> (pestaña Horario). Ejemplo: si los lunes se atiende de 08:00 a
+              20:00, una sesión de 1 hora puede empezar como máximo a las 19:00 y una de 8 horas, a las 12:00. Los días que no
+              se trabaja aparecen como “Cerrado”.
             </p>
             <Subtitulo>Estados de una reserva</Subtitulo>
             <Lista
@@ -124,7 +126,8 @@ function ContenidoDocumentacion() {
                 'Disponible: el día no tiene ocupación.',
                 'Horarios limitados: hay reservas o bloqueos, pero todavía entra un turno de la duración elegida.',
                 'Completa: no entra ningún turno de esa duración.',
-                'Bloqueada: el día completo está bloqueado.',
+                'Bloqueada: el día completo está bloqueado puntualmente.',
+                'Cerrado: según el horario semanal, ese día de la semana no se trabaja.',
                 'Pasada: no se puede reservar.',
               ]}
             />
@@ -148,8 +151,9 @@ function ContenidoDocumentacion() {
               filas={[
                 ['Reservas', 'Resumen (total, pendientes, confirmadas, canceladas, próximas), próximas reservas, búsqueda, filtros por estado y período, y cambio de estado. Cancelar pide confirmación.'],
                 ['Agenda', 'Calendario de consulta: qué hay reservado o bloqueado cada día y qué franjas quedan libres.'],
-                ['Bloqueos', 'Bloquear un día completo o una franja horaria, con motivo. Listar y eliminar bloqueos. No se puede bloquear sobre una reserva activa.'],
-                ['Servicios', 'Horario de trabajo (apertura y cierre) y nombre y duración en horas de cada uno de los 4 servicios.'],
+                ['Horario', 'Horario habitual de la semana: qué días se trabaja y de qué hora a qué hora cada día. Atajos “Lunes a viernes”, “Lunes a sábado” y “Todos los días”, y opción para aplicar el mismo horario a todos los días abiertos.'],
+                ['Bloqueos', 'Cierres puntuales: un día completo o una franja horaria, con motivo. Listar y eliminar bloqueos. No se puede bloquear sobre una reserva activa.'],
+                ['Servicios', 'Nombre y duración en horas de cada uno de los 4 servicios.'],
                 ['Galería', 'Subir fotos (se reducen a 1600 px) o agregarlas por enlace, escribir la descripción, etiquetar, ordenar y eliminar. Muestra el espacio usado del navegador.'],
                 ['Etiquetas', 'Crear, renombrar y eliminar etiquetas. Las que tienen fotos aparecen como filtros en la galería pública.'],
                 ['Perfil', 'Cambiar el correo de la cuenta y la contraseña.'],
@@ -158,8 +162,10 @@ function ContenidoDocumentacion() {
             <Subtitulo>Reglas que conviene saber</Subtitulo>
             <Lista
               items={[
+                'Horario y Bloqueos se complementan: el Horario es lo habitual de cada semana (por ejemplo, lunes a sábado de 08:00 a 20:00) y los Bloqueos son excepciones de una fecha concreta (vacaciones, un compromiso).',
                 'Cambiar la duración de un servicio o el horario de trabajo solo afecta a las reservas nuevas. Las existentes conservan su horario, aunque queden fuera del nuevo (el panel avisa cuántas).',
-                'El horario de trabajo no puede ser más corto que el servicio más largo.',
+                'Tiene que haber al menos un día abierto, y al menos un día tiene que ser tan largo como el servicio más largo. Un día más corto que un servicio simplemente no ofrece turnos para ese servicio.',
+                'Un día cerrado por el horario semanal no hace falta bloquearlo: la pestaña Bloqueos lo indica.',
                 'Para bloquear un día completo no puede tener reservas activas ni franjas ya bloqueadas.',
                 'Eliminar una etiqueta la quita de las fotos, pero no borra las fotos.',
               ]}
@@ -273,7 +279,7 @@ export async function enviarCorreo(correo: Correo): Promise<ResultadoEnvio> {
                 ['Perfil de Instagram', <Codigo>redes.instagram</Codigo>, CONFIG.redes.instagram.esMuestra ? 'Muestra' : CONFIG.redes.instagram.usuario],
                 ['Correo público de contacto (vacío = no se muestra)', <Codigo>email</Codigo>, CONFIG.email || '(vacío)'],
                 ['Ubicación, cobertura y horario de atención', <Codigo>ubicacion · cobertura · horario</Codigo>, CONFIG.ubicacion],
-                ['Horario de trabajo por defecto (se cambia desde el panel)', <Codigo>agenda.horaInicio / horaFin</Codigo>, `${CONFIG.agenda.horaInicio} a ${CONFIG.agenda.horaFin}`],
+                ['Horario de trabajo por defecto (se cambia desde la pestaña Horario)', <Codigo>agenda.diasLaborables · horaInicio · horaFin</Codigo>, resumenHorario(horarioPorDefecto())],
                 ['Separación entre horarios de inicio', <Codigo>agenda.intervaloMinutos</Codigo>, `${CONFIG.agenda.intervaloMinutos} min`],
                 ['Contraseña y correo iniciales de la cuenta', <Codigo>admin.clave · admin.email</Codigo>, 'Ver config.ts'],
                 ['Mostrar el enlace de restablecimiento en pantalla', <Codigo>correo.mostrarEnlaceSinEnvio</Codigo>, String(CONFIG.correo.mostrarEnlaceSinEnvio)],
@@ -335,7 +341,7 @@ export async function enviarCorreo(correo: Correo): Promise<ResultadoEnvio> {
                 [<Codigo>leandro_baez_reservas</Codigo>, 'Reservas'],
                 [<Codigo>leandro_baez_fechas_bloqueadas</Codigo>, 'Bloqueos de día completo o de franja'],
                 [<Codigo>leandro_baez_servicios</Codigo>, 'Nombre y duración modificados de los servicios'],
-                [<Codigo>leandro_baez_horario</Codigo>, 'Horario de trabajo'],
+                [<Codigo>leandro_baez_horario</Codigo>, 'Horario semanal de trabajo (día por día)'],
                 [<Codigo>leandro_baez_etiquetas</Codigo>, 'Etiquetas de la galería'],
                 [<Codigo>leandro_baez_galeria</Codigo>, 'Fotos de la galería (las subidas se guardan como imagen)'],
                 [<Codigo>leandro_baez_cuenta</Codigo>, 'Correo y hash de la contraseña (solo si se cambiaron)'],
@@ -387,6 +393,9 @@ npm run preview    # sirve la versión compilada`}</Bloque>
             <Problema titulo="Un día aparece “Completa” aunque tiene horas libres">
               El calendario considera la duración del servicio elegido: si los huecos libres son más cortos que la sesión, el día
               figura completo para ese servicio. En la pestaña Agenda se ven las franjas libres.
+            </Problema>
+            <Problema titulo="Un día aparece “Cerrado”">
+              Ese día de la semana no está marcado como abierto en la pestaña Horario. Marcalo y guardá el horario.
             </Problema>
             <Problema titulo="No me deja bloquear un día">
               El día tiene reservas activas o franjas ya bloqueadas. Cancelá esas reservas o eliminá las franjas primero.

@@ -150,7 +150,7 @@ function FormularioClave({ onMensaje, onGuardado }: { onMensaje: (m: Mensaje | n
       <h3 id="titulo-perfil-clave" className="flex items-center gap-2 font-serif text-xl">
         <KeyRound size={18} className="text-arena-texto" aria-hidden="true" /> Cambiar contraseña
       </h3>
-      <form onSubmit={guardar} noValidate className="mt-5 grid gap-5 sm:grid-cols-2">
+      <form onSubmit={guardar} noValidate className="mt-5 grid max-w-md gap-5">
         <CampoClave
           id="perfil-clave-actual"
           etiqueta="Contraseña actual"
@@ -162,7 +162,6 @@ function FormularioClave({ onMensaje, onGuardado }: { onMensaje: (m: Mensaje | n
           error={errores.actual}
           autoComplete="current-password"
         />
-        <div className="hidden sm:block" aria-hidden="true" />
         <CampoClave
           id="perfil-clave-nueva"
           etiqueta="Nueva contraseña"
@@ -186,7 +185,7 @@ function FormularioClave({ onMensaje, onGuardado }: { onMensaje: (m: Mensaje | n
           error={errores.confirmacion}
           autoComplete="new-password"
         />
-        <div className="sm:col-span-2 sm:flex sm:justify-end">
+        <div>
           <Boton type="submit" disabled={guardando} aria-busy={guardando} className="w-full sm:w-auto">
             {guardando ? <LoaderCircle size={15} className="animate-spin" aria-hidden="true" /> : <Save size={15} aria-hidden="true" />}
             Guardar contraseña

@@ -38,7 +38,7 @@ Todos los datos editables están en **`src/config.ts`**:
 | Correo inicial de la cuenta de administración | `CONFIG.admin.email` | **Muestra** (`admin@ejemplo.com`) |
 | Mostrar el enlace de restablecimiento en pantalla mientras no haya envío de correos | `CONFIG.correo.mostrarEnlaceSinEnvio` | `true` (demostración) |
 | Ubicación, cobertura y horarios | `CONFIG.ubicacion`, `CONFIG.cobertura`, `CONFIG.horario` | Datos reales del brief |
-| Horario de trabajo por defecto | `CONFIG.agenda.horaInicio` / `horaFin` | 08:00 a 22:00 (editable desde el panel) |
+| Horario de trabajo por defecto | `CONFIG.agenda.diasLaborables`, `horaInicio`, `horaFin` | Lunes a sábado, 08:00 a 22:00 (editable desde la pestaña *Horario*) |
 | Separación entre horarios de inicio | `CONFIG.agenda.intervaloMinutos` | 30 minutos |
 
 - El número de WhatsApp va en formato internacional, sin `+` ni espacios. Si se deja vacío, los botones de WhatsApp se desactivan y se muestra un aviso.
@@ -65,8 +65,9 @@ Todos los datos editables están en **`src/config.ts`**:
 | --- | --- |
 | Reservas | Resumen, próximas reservas, filtros y cambio de estado |
 | Agenda | Calendario de consulta: reservas y bloqueos de cada día y franjas libres |
-| Bloqueos | Bloquear un **día completo** o una **franja horaria**, con motivo; listar y eliminar bloqueos |
-| Servicios | Definir el **horario de trabajo** (apertura y cierre) y cambiar el **nombre** y la **duración en horas** de los 4 servicios |
+| Horario | **Horario habitual de la semana**: qué días se trabaja y de qué hora a qué hora cada día, con atajos (lunes a viernes, lunes a sábado, todos los días) |
+| Bloqueos | Cierres puntuales: bloquear un **día completo** o una **franja horaria**, con motivo; listar y eliminar bloqueos |
+| Servicios | Cambiar el **nombre** y la **duración en horas** de los 4 servicios |
 | Galería | Subir fotos (se reducen a 1600 px) o agregarlas por URL, describirlas, etiquetarlas, ordenarlas y eliminarlas |
 | Etiquetas | Crear, renombrar y eliminar etiquetas (al eliminar una, se quita de las fotos) |
 | Perfil | Cambiar el **correo** de la cuenta y la **contraseña** (ambos piden la contraseña actual) |
@@ -79,12 +80,12 @@ Todos los datos editables están en **`src/config.ts`**:
 
 ## Turnos y reglas de disponibilidad
 
-Cada reserva ocupa un **turno**: hora de inicio + duración del servicio. Los horarios de inicio se ofrecen cada 30 minutos y **el turno completo tiene que caber dentro del horario de trabajo**: con cierre a las 22:00, una sesión de 1 hora puede empezar como máximo a las 21:00. El horario no puede ser más corto que el servicio más largo; si se acorta, las reservas ya registradas que queden fuera se mantienen. Las reglas viven en un solo lugar (`src/services/reservas.ts`) y las usan tanto el calendario público como el panel:
+Cada reserva ocupa un **turno**: hora de inicio + duración del servicio. Los horarios de inicio se ofrecen cada 30 minutos y **el turno completo tiene que caber dentro del horario de trabajo de ese día** (pestaña *Horario*): si los lunes se atiende de 08:00 a 20:00, una sesión de 1 hora puede empezar como máximo a las 19:00. Los días que no se trabaja aparecen como *Cerrado*. Tiene que haber al menos un día abierto que alcance para el servicio más largo; si se cambia el horario, las reservas ya registradas que queden fuera se mantienen. Las reglas viven en un solo lugar (`src/services/reservas.ts`) y las usan tanto el calendario público como el panel:
 
 1. Las reservas `pendiente` y `confirmada` ocupan su franja; las `canceladas` no.
 2. Un bloqueo puede ser de **día completo** o de una **franja horaria**.
 3. Un turno solo se ofrece si entra completo en la jornada, sin superponerse con reservas activas ni bloqueos. Si el turno es para hoy, tiene que empezar después de la hora actual.
-4. En el calendario, cada día se marca como *Disponible*, *Horarios limitados* (hay ocupación, pero entra el turno), *Completa* (no entra ningún turno de esa duración), *Bloqueada* o *Pasada*.
+4. En el calendario, cada día se marca como *Disponible*, *Horarios limitados* (hay ocupación, pero entra el turno), *Completa* (no entra ningún turno de esa duración), *Bloqueada* (cierre puntual), *Cerrado* (no se trabaja ese día de la semana) o *Pasada*.
 5. Antes de guardar, una reserva o un cambio de estado se vuelve a comprobar **contra lo guardado en ese momento**. Así se evitan duplicados por doble clic o por formularios abiertos en dos pestañas.
 6. No se puede reactivar una reserva cancelada si su franja ya está ocupada o bloqueada.
 7. No se puede bloquear sobre una reserva activa, ni bloquear el día completo si ya tiene reservas o franjas bloqueadas.
@@ -99,7 +100,7 @@ Las fechas se manejan como cadenas `YYYY-MM-DD` y las horas como `HH:MM`, siempr
 | `leandro_baez_reservas` | Lista de reservas (`Reserva[]`) |
 | `leandro_baez_fechas_bloqueadas` | Bloqueos de día completo o de franja (`FechaBloqueada[]`) |
 | `leandro_baez_servicios` | Nombre y duración modificados de cada servicio |
-| `leandro_baez_horario` | Horario de trabajo (`{ horaInicio, horaFin }`) |
+| `leandro_baez_horario` | Horario semanal (`{ dias: [7 × { abierto, horaInicio, horaFin }] }`, de lunes a domingo). El formato anterior de horario único se migra solo |
 | `leandro_baez_etiquetas` | Etiquetas de la galería (`Etiqueta[]`) |
 | `leandro_baez_galeria` | Fotos de la galería (`FotoGaleria[]`); las subidas se guardan como imagen JPEG |
 | `leandro_baez_configuracion` | Metadatos (versión, fecha de inicialización) |

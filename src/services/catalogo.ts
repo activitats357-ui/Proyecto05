@@ -4,19 +4,19 @@
  */
 import { ETIQUETAS_INICIALES, GALERIA_INICIAL } from '../data/fotos'
 import { esServicioId, SERVICIOS_BASE, type Servicio, type ServicioId } from '../data/servicios'
-import { CONFIG } from '../config'
 import { CLAVES, escribirLista, escribirObjeto, existeClave, leerLista, leerObjeto, type ResultadoLectura } from '../lib/almacenamiento'
 import {
-  aMinutos,
   DURACION_MINIMA_HORAS,
+  duracionEntre,
   duracionMaximaHoras,
   esHoraValida,
-  fijarJornada,
+  fijarHorarioSemanal,
   formatearDuracion,
+  horarioPorDefecto,
   JORNADA,
+  NOMBRES_DIAS,
 } from '../lib/horas'
-import type { FranjaHoraria } from '../types'
-import type { Etiqueta, FotoGaleria } from '../types'
+import type { DiaHorario, Etiqueta, FotoGaleria, HorarioSemanal } from '../types'
 
 export class ErrorCatalogo extends Error {
   constructor(mensaje: string) {
@@ -27,42 +27,68 @@ export class ErrorCatalogo extends Error {
 
 const esTexto = (v: unknown): v is string => typeof v === 'string'
 
-// ---------- Horario de trabajo ----------
+// ---------- Horario semanal de trabajo ----------
 
-function esHorario(x: unknown): x is FranjaHoraria {
+function esDia(x: unknown): x is DiaHorario {
   if (typeof x !== 'object' || x === null) return false
-  const h = x as Record<string, unknown>
-  return esHoraValida(h.horaInicio) && esHoraValida(h.horaFin) && h.horaInicio < h.horaFin
+  const d = x as Record<string, unknown>
+  return typeof d.abierto === 'boolean' && esHoraValida(d.horaInicio) && esHoraValida(d.horaFin) && d.horaInicio < d.horaFin
+}
+
+interface HorarioGuardado {
+  dias?: unknown
+  horaInicio?: unknown
+  horaFin?: unknown
+}
+
+function esHorarioGuardado(x: unknown): x is HorarioGuardado {
+  if (typeof x !== 'object' || x === null) return false
+  const h = x as HorarioGuardado
+  const semanal = Array.isArray(h.dias) && h.dias.length === 7 && h.dias.every(esDia)
+  // Formato anterior: un único horario para todos los días.
+  const unico = esHoraValida(h.horaInicio) && esHoraValida(h.horaFin) && h.horaInicio < h.horaFin
+  return semanal || unico
+}
+
+function aSemanal(h: HorarioGuardado): HorarioSemanal {
+  if (Array.isArray(h.dias)) return h.dias as HorarioSemanal
+  return NOMBRES_DIAS.map(() => ({ abierto: true, horaInicio: h.horaInicio as string, horaFin: h.horaFin as string }))
 }
 
 /**
- * Lee el horario de trabajo guardado (o el de config.ts) y lo aplica a las
+ * Lee el horario semanal guardado (o el de config.ts) y lo aplica a las
  * reglas de turnos. Se llama antes de cualquier cálculo de disponibilidad.
  */
-export function leerHorario(): { dato: FranjaHoraria; aviso?: string } {
-  const r = leerObjeto(CLAVES.horario, esHorario)
-  const dato = r.dato ?? { horaInicio: CONFIG.agenda.horaInicio, horaFin: CONFIG.agenda.horaFin }
-  fijarJornada(dato.horaInicio, dato.horaFin)
+export function leerHorario(): { dato: HorarioSemanal; aviso?: string } {
+  const r = leerObjeto(CLAVES.horario, esHorarioGuardado)
+  const dato = r.dato ? aSemanal(r.dato) : horarioPorDefecto()
+  fijarHorarioSemanal(dato)
   return { dato, aviso: r.aviso }
 }
 
-export function validarHorario(horaInicio: string, horaFin: string, servicios: Servicio[]): string | null {
-  if (!esHoraValida(horaInicio) || !esHoraValida(horaFin)) return 'Elegí la hora de apertura y la de cierre.'
-  if (horaFin <= horaInicio) return 'La hora de cierre tiene que ser posterior a la de apertura.'
-  const horas = (aMinutos(horaFin) - aMinutos(horaInicio)) / 60
+export function validarHorario(horario: HorarioSemanal, servicios: Servicio[]): string | null {
+  if (horario.length !== 7) return 'El horario tiene que tener los 7 días de la semana.'
+  const abiertos = horario.map((d, i) => ({ ...d, nombre: NOMBRES_DIAS[i] })).filter((d) => d.abierto)
+  if (abiertos.length === 0) return 'Marcá al menos un día de atención.'
+  for (const d of abiertos) {
+    if (!esHoraValida(d.horaInicio) || !esHoraValida(d.horaFin)) return `${d.nombre}: elegí la hora de apertura y la de cierre.`
+    if (d.horaFin <= d.horaInicio) return `${d.nombre}: la hora de cierre tiene que ser posterior a la de apertura.`
+  }
+  const masLargoDia = Math.max(...abiertos.map((d) => duracionEntre(d.horaInicio, d.horaFin)))
   const masLargo = servicios.reduce((a, b) => (b.duracionHoras > a.duracionHoras ? b : a))
-  if (masLargo.duracionHoras > horas) {
-    return `El horario (${formatearDuracion(horas)}) es más corto que “${masLargo.nombre}” (${formatearDuracion(masLargo.duracionHoras)}). Ampliá el horario o reducí la duración del servicio.`
+  if (masLargo.duracionHoras > masLargoDia) {
+    return `Ningún día alcanza para “${masLargo.nombre}” (${formatearDuracion(masLargo.duracionHoras)}): el día más largo tiene ${formatearDuracion(masLargoDia)}. Ampliá el horario o reducí la duración del servicio.`
   }
   return null
 }
 
-export function actualizarHorario(horaInicio: string, horaFin: string): FranjaHoraria {
-  const error = validarHorario(horaInicio, horaFin, leerServicios().datos)
+export function actualizarHorario(horario: HorarioSemanal): HorarioSemanal {
+  const error = validarHorario(horario, leerServicios().datos)
   if (error) throw new ErrorCatalogo(error)
-  escribirObjeto(CLAVES.horario, { horaInicio, horaFin })
-  fijarJornada(horaInicio, horaFin)
-  return { horaInicio, horaFin }
+  const limpio = horario.map((d) => ({ abierto: d.abierto, horaInicio: d.horaInicio, horaFin: d.horaFin }))
+  escribirObjeto(CLAVES.horario, { dias: limpio })
+  fijarHorarioSemanal(limpio)
+  return limpio
 }
 
 // ---------- Servicios ----------
@@ -98,7 +124,7 @@ export function validarServicio(nombre: string, duracionHoras: number): { nombre
   else if (n.length > MAX_NOMBRE_SERVICIO) errores.nombre = `Usá como máximo ${MAX_NOMBRE_SERVICIO} caracteres.`
   if (!Number.isFinite(duracionHoras) || duracionHoras < DURACION_MINIMA_HORAS || duracionHoras > duracionMaximaHoras()) {
     const num = (n: number) => n.toLocaleString('es')
-    errores.duracion = `La duración tiene que estar entre ${num(DURACION_MINIMA_HORAS)} y ${num(duracionMaximaHoras())} horas (el largo del horario de trabajo).`
+    errores.duracion = `La duración tiene que estar entre ${num(DURACION_MINIMA_HORAS)} y ${num(duracionMaximaHoras())} horas (el día de trabajo más largo).`
   } else if (!Number.isInteger((duracionHoras * 60) / JORNADA.paso)) {
     errores.duracion = `Usá múltiplos de ${JORNADA.paso} minutos (por ejemplo 1, 1,5 o 2 horas).`
   }

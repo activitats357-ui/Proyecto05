@@ -21,6 +21,7 @@ export const TEXTO_ESTADO_DIA: Record<EstadoDia, string> = {
   parcial: 'Horarios limitados',
   ocupada: 'Completa',
   bloqueada: 'Bloqueada',
+  cerrada: 'Cerrado',
   pasada: 'Fecha pasada',
 }
 
@@ -188,6 +189,7 @@ export function Calendario({
                         parcial: 'text-tinta hover:bg-arena-claro',
                         ocupada: 'bg-ocupada-fondo text-ocupada line-through decoration-ocupada/40',
                         bloqueada: 'rayado bg-stone-100 text-stone-400',
+                        cerrada: 'bg-stone-50 text-stone-300',
                         pasada: 'text-stone-300',
                       }[estado],
                   seleccionable ? 'cursor-pointer' : 'cursor-not-allowed',
@@ -214,7 +216,7 @@ function mismoDiaEnMes(fecha: string, n: number): string {
 }
 
 function IndicadorDia({ estado, seleccionada }: { estado: EstadoDia; seleccionada: boolean }) {
-  if (seleccionada || estado === 'pasada') return null
+  if (seleccionada || estado === 'pasada' || estado === 'cerrada') return null
   const estilo = {
     disponible: 'size-1 bg-arena',
     parcial: 'size-1.5 border border-arena-texto bg-transparent',
@@ -231,6 +233,7 @@ export function LeyendaCalendario({ className }: { className?: string }) {
     { texto: 'Seleccionada', muestra: <span className="block size-5 rounded-sm bg-arena" /> },
     { texto: 'Completa', muestra: <span className="block size-5 rounded-sm bg-ocupada-fondo ring-1 ring-ocupada/30 ring-inset" /> },
     { texto: 'Bloqueada', muestra: <span className="rayado block size-5 rounded-sm bg-stone-100" /> },
+    { texto: 'Cerrado', muestra: <span className="block size-5 rounded-sm border border-borde bg-stone-50" /> },
     { texto: 'Pasada', muestra: <span className="grid size-5 place-items-center rounded-sm text-[10px] text-stone-300">00</span> },
     { texto: 'Hoy', muestra: <span className="block size-5 rounded-sm ring-1 ring-tinta ring-inset" /> },
   ]

@@ -5,8 +5,8 @@ import { Campo } from '../../components/Campo'
 import { DialogoConfirmacion } from '../../components/Dialogo'
 import { useDatos } from '../../context/contextoDatos'
 import { cx } from '../../lib/cx'
-import { formatearFechaCorta, formatearFechaLarga } from '../../lib/fechas'
-import { formatearFranja, horasDelDia, textoJornada } from '../../lib/horas'
+import { esFechaISOValida, formatearFechaCorta, formatearFechaLarga } from '../../lib/fechas'
+import { diaDeLaSemana, formatearFranja, horasDelDia, NOMBRES_DIAS, resumenHorario } from '../../lib/horas'
 import { MAX_MOTIVO_BLOQUEO } from '../../services/reservas'
 import type { FechaBloqueada } from '../../types'
 import type { Mensaje } from './PanelAdmin'
@@ -15,12 +15,28 @@ type Tipo = 'dia' | 'franja'
 
 export function BloqueosAdmin({ onMensaje }: { onMensaje: (m: Mensaje | null) => void }) {
   const { bloqueos, hoy, horario, bloquear, eliminarBloqueo } = useDatos()
-  // Solo se ofrecen horas dentro del horario de trabajo vigente.
-  const HORAS = horasDelDia().filter((h) => h >= horario.horaInicio && h <= horario.horaFin)
   const [fecha, setFecha] = useState('')
+  // Solo se ofrecen horas dentro del horario del día elegido (o del rango semanal si todavía no hay fecha).
+  const abiertos = horario.filter((d) => d.abierto)
+  const diaElegido = esFechaISOValida(fecha) ? horario[diaDeLaSemana(fecha)] : null
+  const diaCerrado = diaElegido !== null && !diaElegido.abierto
+  const rango = diaElegido?.abierto
+    ? diaElegido
+    : { horaInicio: abiertos.map((d) => d.horaInicio).sort()[0] ?? '08:00', horaFin: abiertos.map((d) => d.horaFin).sort().at(-1) ?? '20:00' }
+  const HORAS = horasDelDia().filter((h) => h >= rango.horaInicio && h <= rango.horaFin)
   const [tipo, setTipo] = useState<Tipo>('dia')
   const [desde, setDesde] = useState(HORAS[2] ?? HORAS[0])
   const [hasta, setHasta] = useState(HORAS[10] ?? HORAS[HORAS.length - 1])
+
+  function elegirFecha(nueva: string) {
+    setFecha(nueva)
+    setErrorFecha(undefined)
+    const dia = esFechaISOValida(nueva) ? horario[diaDeLaSemana(nueva)] : null
+    if (dia?.abierto && (desde < dia.horaInicio || hasta > dia.horaFin || desde >= hasta)) {
+      setDesde(dia.horaInicio)
+      setHasta(dia.horaFin)
+    }
+  }
   const [motivo, setMotivo] = useState('')
   const [errorFecha, setErrorFecha] = useState<string>()
   const [aEliminar, setAEliminar] = useState<FechaBloqueada | null>(null)
@@ -72,12 +88,24 @@ export function BloqueosAdmin({ onMensaje }: { onMensaje: (m: Mensaje | null) =>
           Nuevo bloqueo
         </h2>
         <p className="mt-1 text-sm text-gris">
-          Bloqueá un día entero o solo unas horas del horario de trabajo ({textoJornada()}). No se puede bloquear sobre una
-          reserva activa.
+          Cierres puntuales: un día entero o solo unas horas. No se puede bloquear sobre una reserva activa. El horario habitual
+          ({resumenHorario(horario)}) se define en la pestaña Horario.
         </p>
         <form onSubmit={enviar} noValidate className="mt-6 space-y-5">
-          <Campo id="bloqueo-fecha" etiqueta="Fecha" obligatorio error={errorFecha}>
-            {(p) => <input {...p} type="date" min={hoy} value={fecha} onChange={(e) => setFecha(e.target.value)} className="control" />}
+          <Campo
+            id="bloqueo-fecha"
+            etiqueta="Fecha"
+            obligatorio
+            error={errorFecha}
+            ayuda={
+              diaElegido
+                ? diaElegido.abierto
+                  ? `${NOMBRES_DIAS[diaDeLaSemana(fecha)]}: horario de ${formatearFranja(diaElegido.horaInicio, diaElegido.horaFin)}.`
+                  : `${NOMBRES_DIAS[diaDeLaSemana(fecha)]}: cerrado según el horario semanal, no hace falta bloquearlo.`
+                : undefined
+            }
+          >
+            {(p) => <input {...p} type="date" min={hoy} value={fecha} onChange={(e) => elegirFecha(e.target.value)} className="control" />}
           </Campo>
 
           <fieldset>
@@ -145,7 +173,7 @@ export function BloqueosAdmin({ onMensaje }: { onMensaje: (m: Mensaje | null) =>
             )}
           </Campo>
 
-          <Boton type="submit" className="w-full">
+          <Boton type="submit" className="w-full" disabled={diaCerrado}>
             <Lock size={15} aria-hidden="true" /> {tipo === 'dia' ? 'Bloquear día completo' : 'Bloquear franja'}
           </Boton>
         </form>

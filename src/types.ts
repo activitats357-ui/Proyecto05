@@ -49,13 +49,21 @@ export interface FranjaHoraria {
   horaFin: string
 }
 
+export interface DiaHorario extends FranjaHoraria {
+  abierto: boolean
+}
+
+/** Horario de trabajo de cada día de la semana: 7 elementos, de lunes (0) a domingo (6). */
+export type HorarioSemanal = DiaHorario[]
+
 export type DatosNuevaReserva = Pick<Reserva, 'nombre' | 'celular' | 'email' | 'servicioId' | 'fecha' | 'horaInicio' | 'notas'>
 
 /**
  * disponible: sin ocupación · parcial: hay horarios libres, pero no todo el día
  * ocupada: no queda ningún horario para la duración pedida · bloqueada: día completo bloqueado
+ * cerrada: según el horario semanal, ese día no se trabaja
  */
-export type EstadoDia = 'disponible' | 'parcial' | 'ocupada' | 'bloqueada' | 'pasada'
+export type EstadoDia = 'disponible' | 'parcial' | 'ocupada' | 'bloqueada' | 'cerrada' | 'pasada'
 
 export interface Estadisticas {
   total: number

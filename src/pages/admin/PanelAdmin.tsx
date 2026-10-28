@@ -1,4 +1,4 @@
-import { Ban, BookOpen, CalendarDays, Clock, Eraser, Images, ListChecks, LogOut, RotateCcw, Tags, UserRound } from 'lucide-react'
+import { Ban, BookOpen, CalendarClock, CalendarDays, Clock, Eraser, Images, ListChecks, LogOut, RotateCcw, Tags, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Aviso } from '../../components/Aviso'
@@ -11,6 +11,7 @@ import { AgendaAdmin } from './AgendaAdmin'
 import { BloqueosAdmin } from './BloqueosAdmin'
 import { EtiquetasAdmin } from './EtiquetasAdmin'
 import { GaleriaAdmin } from './GaleriaAdmin'
+import { HorarioAdmin } from './HorarioAdmin'
 import { PerfilAdmin } from './PerfilAdmin'
 import { ReservasAdmin } from './ReservasAdmin'
 import { ServiciosAdmin } from './ServiciosAdmin'
@@ -23,6 +24,7 @@ export interface Mensaje {
 const PESTANAS = [
   { id: 'reservas', titulo: 'Reservas', Icono: ListChecks },
   { id: 'agenda', titulo: 'Agenda', Icono: CalendarDays },
+  { id: 'horario', titulo: 'Horario', Icono: CalendarClock },
   { id: 'bloqueos', titulo: 'Bloqueos', Icono: Ban },
   { id: 'servicios', titulo: 'Servicios', Icono: Clock },
   { id: 'galeria', titulo: 'Galería', Icono: Images },
@@ -169,6 +171,7 @@ export function PanelAdmin({ onSalir }: { onSalir: () => void }) {
             {
               reservas: <ReservasAdmin onMensaje={setMensaje} />,
               agenda: <AgendaAdmin onGestionarBloqueos={() => cambiarPestana('bloqueos')} />,
+              horario: <HorarioAdmin onMensaje={setMensaje} />,
               bloqueos: <BloqueosAdmin onMensaje={setMensaje} />,
               servicios: <ServiciosAdmin onMensaje={setMensaje} />,
               galeria: <GaleriaAdmin onMensaje={setMensaje} />,

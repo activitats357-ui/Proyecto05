@@ -5,7 +5,7 @@ import { Calendario, LeyendaCalendario, TEXTO_ESTADO_DIA } from '../../component
 import { EtiquetaEstado } from '../../components/Varios'
 import { useDatos } from '../../context/contextoDatos'
 import { formatearFechaLarga, mesDeFecha } from '../../lib/fechas'
-import { aHora, formatearFranja } from '../../lib/horas'
+import { aHora, diaDeLaSemana, formatearFranja, jornadaDe, NOMBRES_DIAS, textoJornadaDe } from '../../lib/horas'
 import { bloqueoDiaCompleto, bloqueosDelDia, franjasLibres, reservasActivasDelDia } from '../../services/reservas'
 
 const todosSeleccionables = () => true
@@ -50,7 +50,10 @@ export function AgendaAdmin({ onGestionarBloqueos }: { onGestionarBloqueos: () =
           Agenda del día
         </h2>
         <p className="mt-4 font-serif text-2xl leading-snug">{formatearFechaLarga(fecha)}</p>
-        <p className="mt-1 text-sm text-gris">Estado: {TEXTO_ESTADO_DIA[estadoDeFecha(fecha)]}</p>
+        <p className="mt-1 text-sm text-gris">
+          Estado: {TEXTO_ESTADO_DIA[estadoDeFecha(fecha)]}
+          {jornadaDe(fecha) && ` · Horario: ${textoJornadaDe(fecha)}`}
+        </p>
 
         {diaBloqueado ? (
           <p className="mt-6 flex gap-2 rounded-sm bg-stone-100 p-4 text-sm">
@@ -88,7 +91,14 @@ export function AgendaAdmin({ onGestionarBloqueos }: { onGestionarBloqueos: () =
           </ol>
         )}
 
-        {!diaBloqueado && fecha >= hoy && (
+        {!jornadaDe(fecha) && (
+          <p className="mt-6 rounded-sm bg-stone-100 p-4 text-sm">
+            Día cerrado según el horario semanal ({NOMBRES_DIAS[diaDeLaSemana(fecha)].toLowerCase()}). Se cambia en la pestaña
+            Horario.
+          </p>
+        )}
+
+        {!diaBloqueado && jornadaDe(fecha) && fecha >= hoy && (
           <div className="mt-6 border-t border-borde pt-5">
             <p className="flex items-center gap-2 text-[13px] text-gris">
               <Clock size={14} aria-hidden="true" /> Franjas libres

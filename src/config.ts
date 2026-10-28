@@ -30,9 +30,12 @@ export const CONFIG = {
 
   /**
    * Horario de trabajo por defecto: los turnos deben empezar y terminar
-   * dentro de este rango. Se puede cambiar desde /admin (pestaña Servicios).
+   * dentro del horario de su día. Se cambia desde /admin (pestaña Horario),
+   * donde además cada día puede tener su propio horario.
    */
   agenda: {
+    // Días que se trabaja: 0 = lunes … 6 = domingo.
+    diasLaborables: [0, 1, 2, 3, 4, 5],
     horaInicio: '08:00',
     horaFin: '22:00',
     // Separación entre horarios de inicio y unidad mínima de duración.

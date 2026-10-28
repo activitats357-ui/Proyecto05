@@ -3,6 +3,7 @@
  * cálculos se hacen en minutos desde la medianoche.
  */
 import { CONFIG } from '../config'
+import type { HorarioSemanal } from '../types'
 
 const RE_HORA = /^(?:([01]\d|2[0-3]):([0-5]\d)|24:00)$/
 
@@ -26,31 +27,80 @@ export function aHora(minutos: number): string {
   return `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`
 }
 
-/**
- * Horario de trabajo vigente, en minutos. Arranca con los valores de
- * config.ts y se actualiza con fijarJornada() al leer el horario guardado
- * desde el panel. Ningún turno ni bloqueo puede salirse de este rango.
- */
 export const JORNADA = {
-  inicio: aMinutos(CONFIG.agenda.horaInicio),
-  fin: aMinutos(CONFIG.agenda.horaFin),
+  /** Separación entre horarios de inicio y unidad mínima de duración. */
   paso: CONFIG.agenda.intervaloMinutos,
-}
-
-export function fijarJornada(horaInicio: string, horaFin: string): void {
-  JORNADA.inicio = aMinutos(horaInicio)
-  JORNADA.fin = aMinutos(horaFin)
 }
 
 export const DURACION_MINIMA_HORAS = JORNADA.paso / 60
 
-export function duracionMaximaHoras(): number {
-  return (JORNADA.fin - JORNADA.inicio) / 60
+// ---------- Horario semanal ----------
+
+export const NOMBRES_DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+
+export function horarioPorDefecto(): HorarioSemanal {
+  const laborables: readonly number[] = CONFIG.agenda.diasLaborables
+  return NOMBRES_DIAS.map((_, i) => ({
+    abierto: laborables.includes(i),
+    horaInicio: CONFIG.agenda.horaInicio,
+    horaFin: CONFIG.agenda.horaFin,
+  }))
 }
 
-/** "08:00 a 22:00 h" para el horario de trabajo vigente. */
-export function textoJornada(): string {
-  return formatearFranja(aHora(JORNADA.inicio), aHora(JORNADA.fin))
+/**
+ * Horario semanal vigente. Arranca con config.ts y se actualiza con
+ * fijarHorarioSemanal() al leer el horario guardado desde el panel.
+ * Ningún turno ni bloqueo puede salirse del horario de su día.
+ */
+let horarioVigente: HorarioSemanal = horarioPorDefecto()
+
+export function fijarHorarioSemanal(horario: HorarioSemanal): void {
+  horarioVigente = horario.map((d) => ({ ...d }))
+}
+
+/** 0 = lunes … 6 = domingo. */
+export function diaDeLaSemana(fecha: string): number {
+  const [anio, mes, dia] = fecha.split('-').map(Number)
+  return (new Date(anio, mes - 1, dia, 12).getDay() + 6) % 7
+}
+
+/** Horario de trabajo de esa fecha, o null si ese día no se trabaja. */
+export function jornadaDe(fecha: string): Intervalo | null {
+  const dia = horarioVigente[diaDeLaSemana(fecha)]
+  return dia?.abierto ? { inicio: aMinutos(dia.horaInicio), fin: aMinutos(dia.horaFin) } : null
+}
+
+/** Duración del día abierto más largo, en horas. */
+export function duracionMaximaHoras(): number {
+  return Math.max(0, ...horarioVigente.filter((d) => d.abierto).map((d) => duracionEntre(d.horaInicio, d.horaFin)))
+}
+
+/** "08:00 a 20:00 h", o "cerrado" si ese día no se trabaja. */
+export function textoJornadaDe(fecha: string): string {
+  const j = jornadaDe(fecha)
+  return j ? formatearFranja(aHora(j.inicio), aHora(j.fin)) : 'cerrado'
+}
+
+/** Resumen legible: "Lunes a viernes, 08:00 a 20:00 h · Sábado, 09:00 a 13:00 h". */
+export function resumenHorario(horario: HorarioSemanal): string {
+  const grupos: { desde: number; hasta: number; texto: string }[] = []
+  horario.forEach((d, i) => {
+    if (!d.abierto) return
+    const texto = formatearFranja(d.horaInicio, d.horaFin)
+    const ultimo = grupos.at(-1)
+    if (ultimo && ultimo.hasta === i - 1 && ultimo.texto === texto) ultimo.hasta = i
+    else grupos.push({ desde: i, hasta: i, texto })
+  })
+  if (grupos.length === 0) return 'Sin días de atención'
+  return grupos
+    .map((g) => {
+      const dias =
+        g.desde === g.hasta
+          ? NOMBRES_DIAS[g.desde]
+          : `${NOMBRES_DIAS[g.desde]} a ${NOMBRES_DIAS[g.hasta].toLowerCase()}`
+      return `${dias}, ${g.texto}`
+    })
+    .join(' · ')
 }
 
 /** Todas las horas del día a intervalos regulares (00:00 a 24:00). */
