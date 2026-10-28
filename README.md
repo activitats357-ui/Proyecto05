@@ -34,7 +34,9 @@ Todos los datos editables están en **`src/config.ts`**:
 | Número de WhatsApp de destino | `CONFIG.whatsapp.numero` | **Muestra** (`595900000000`) |
 | Perfil de Instagram | `CONFIG.redes.instagram` | **Muestra** |
 | Correo público | `CONFIG.email` | Vacío (no se muestra) |
-| Clave del panel `/admin` | `CONFIG.admin.clave` | `leandro2026` |
+| Contraseña inicial del panel `/admin` | `CONFIG.admin.clave` | `leandro2026` (se cambia desde *Perfil*) |
+| Correo inicial de la cuenta de administración | `CONFIG.admin.email` | **Muestra** (`admin@ejemplo.com`) |
+| Mostrar el enlace de restablecimiento en pantalla mientras no haya envío de correos | `CONFIG.correo.mostrarEnlaceSinEnvio` | `true` (demostración) |
 | Ubicación, cobertura y horarios | `CONFIG.ubicacion`, `CONFIG.cobertura`, `CONFIG.horario` | Datos reales del brief |
 | Horario de trabajo por defecto | `CONFIG.agenda.horaInicio` / `horaFin` | 08:00 a 22:00 (editable desde el panel) |
 | Separación entre horarios de inicio | `CONFIG.agenda.intervaloMinutos` | 30 minutos |
@@ -65,6 +67,13 @@ Todos los datos editables están en **`src/config.ts`**:
 | Servicios | Definir el **horario de trabajo** (apertura y cierre) y cambiar el **nombre** y la **duración en horas** de los 4 servicios |
 | Galería | Subir fotos (se reducen a 1600 px) o agregarlas por URL, describirlas, etiquetarlas, ordenarlas y eliminarlas |
 | Etiquetas | Crear, renombrar y eliminar etiquetas (al eliminar una, se quita de las fotos) |
+| Perfil | Cambiar el **correo** de la cuenta y la **contraseña** (ambos piden la contraseña actual) |
+
+### Contraseña y restablecimiento
+
+- La contraseña nunca se guarda en texto: se guarda un hash PBKDF2-SHA-256 con sal. Mientras no se cambie, vale la inicial de `config.ts`.
+- En la pantalla de acceso, **“¿Olvidaste tu contraseña?”** pide el correo de la cuenta y genera un enlace de un solo uso, válido 60 minutos, hacia `/admin/restablecer`. Del enlace solo se guarda su hash. La respuesta no revela si el correo coincide con la cuenta.
+- **Envío de correos pendiente de configurar.** Todo el envío pasa por `src/services/correo.ts`, que hoy no envía nada. Para activarlo, se implementa `enviarCorreo()` y se hace que `correoConfigurado()` devuelva `true`; el resto de la app no cambia. Mientras tanto, si `CONFIG.correo.mostrarEnlaceSinEnvio` es `true`, el enlace se muestra en pantalla para poder probar el flujo. Desactivalo antes de publicar en producción.
 
 ## Turnos y reglas de disponibilidad
 
@@ -92,6 +101,8 @@ Las fechas se manejan como cadenas `YYYY-MM-DD` y las horas como `HH:MM`, siempr
 | `leandro_baez_etiquetas` | Etiquetas de la galería (`Etiqueta[]`) |
 | `leandro_baez_galeria` | Fotos de la galería (`FotoGaleria[]`); las subidas se guardan como imagen JPEG |
 | `leandro_baez_configuracion` | Metadatos (versión, fecha de inicialización) |
+| `leandro_baez_cuenta` | Correo de la cuenta y hash de la contraseña (solo existe si se cambiaron) |
+| `leandro_baez_restablecimiento` | Pedido de restablecimiento vigente (hash del enlace y vencimiento) |
 | `leandro_baez_admin_sesion` *(sessionStorage)* | Sesión del panel; se borra al cerrar la pestaña |
 
 - Si un dato guardado está dañado (JSON inválido o registros con formato incorrecto), **no se sobrescribe en silencio**: se guarda una copia en `<clave>__respaldo` y se muestra un aviso.
@@ -114,6 +125,7 @@ Todos llevan `esDemo: true` y datos de prueba (dominio `ejemplo.com`, teléfonos
 
 - **La disponibilidad es local a cada navegador.** Una reserva hecha en un dispositivo no la ve otro dispositivo ni el fotógrafo. No es una agenda compartida ni en tiempo real. Por eso la reserva se presenta como *solicitud registrada* y la coordinación sigue por WhatsApp.
 - **Los cambios del panel (servicios, galería, etiquetas, bloqueos) también son locales.** Solo se ven en el navegador donde se hicieron; los demás visitantes siguen viendo el contenido inicial.
+- **La contraseña también es local a cada navegador.** Si se cambia en un navegador, en los demás sigue valiendo la inicial de `config.ts`.
 - **El acceso a `/admin` es una protección de demostración.** La clave está en el código del cliente y se puede inspeccionar. No es apta para producción.
 - El botón de WhatsApp solo **abre** WhatsApp con el mensaje redactado. No se envía nada automáticamente.
 - Las políticas y condiciones están pendientes de redacción y deben revisarse antes de publicar.

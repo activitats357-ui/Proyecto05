@@ -41,7 +41,19 @@ export const CONFIG = {
 
   admin: {
     // Protección de demostración: el código del cliente puede inspeccionarse.
+    // Clave y correo iniciales; desde el panel (pestaña Perfil) se pueden cambiar.
     clave: 'leandro2026',
+    // MUESTRA: correo de la cuenta de administración al que se envía el enlace para restablecer la contraseña.
+    email: 'admin@ejemplo.com',
+  },
+
+  correo: {
+    /**
+     * Mientras el envío de correos no esté configurado (src/services/correo.ts),
+     * muestra en pantalla el enlace para restablecer la contraseña, para poder
+     * probar el flujo. Desactivalo (false) cuando el envío funcione.
+     */
+    mostrarEnlaceSinEnvio: true,
   },
 } as const
 

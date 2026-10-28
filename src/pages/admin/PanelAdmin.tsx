@@ -1,4 +1,4 @@
-import { Ban, CalendarDays, Clock, Images, ListChecks, LogOut, Tags } from 'lucide-react'
+import { Ban, CalendarDays, Clock, Images, ListChecks, LogOut, Tags, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Aviso } from '../../components/Aviso'
 import { Boton } from '../../components/Boton'
@@ -10,6 +10,7 @@ import { AgendaAdmin } from './AgendaAdmin'
 import { BloqueosAdmin } from './BloqueosAdmin'
 import { EtiquetasAdmin } from './EtiquetasAdmin'
 import { GaleriaAdmin } from './GaleriaAdmin'
+import { PerfilAdmin } from './PerfilAdmin'
 import { ReservasAdmin } from './ReservasAdmin'
 import { ServiciosAdmin } from './ServiciosAdmin'
 
@@ -25,6 +26,7 @@ const PESTANAS = [
   { id: 'servicios', titulo: 'Servicios', Icono: Clock },
   { id: 'galeria', titulo: 'Galería', Icono: Images },
   { id: 'etiquetas', titulo: 'Etiquetas', Icono: Tags },
+  { id: 'perfil', titulo: 'Perfil', Icono: UserRound },
 ] as const
 type Pestana = (typeof PESTANAS)[number]['id']
 
@@ -154,6 +156,7 @@ export function PanelAdmin({ onSalir }: { onSalir: () => void }) {
               servicios: <ServiciosAdmin onMensaje={setMensaje} />,
               galeria: <GaleriaAdmin onMensaje={setMensaje} />,
               etiquetas: <EtiquetasAdmin onMensaje={setMensaje} />,
+              perfil: <PerfilAdmin onMensaje={setMensaje} />,
             }[pestana]
           }
         </div>

@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import { Plantilla } from './components/Plantilla'
 import Admin from './pages/admin/Admin'
+import RestablecerClave from './pages/admin/RestablecerClave'
 import Confirmacion from './pages/Confirmacion'
 import Contacto from './pages/Contacto'
 import Inicio from './pages/Inicio'
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="contacto" element={<Contacto />} />
         <Route path="politicas" element={<Politicas />} />
         <Route path="admin" element={<Admin />} />
+        <Route path="admin/restablecer" element={<RestablecerClave />} />
         <Route path="*" element={<NoEncontrada />} />
       </Route>
     </Routes>

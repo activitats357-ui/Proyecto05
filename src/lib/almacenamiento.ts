@@ -13,7 +13,17 @@ export const CLAVES = {
   etiquetas: `${PREFIJO}etiquetas`,
   galeria: `${PREFIJO}galeria`,
   horario: `${PREFIJO}horario`,
+  cuenta: `${PREFIJO}cuenta`,
+  restablecimiento: `${PREFIJO}restablecimiento`,
 } as const
+
+export function eliminarClave(clave: string): void {
+  try {
+    storage().removeItem(clave)
+  } catch {
+    /* sin almacenamiento no hay nada que borrar */
+  }
+}
 
 /** Caracteres ocupados por las claves de la app (localStorage suele admitir unos 5 millones). */
 export function usoAlmacenamiento(): number {
